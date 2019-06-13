@@ -14,7 +14,7 @@ else
     exit 1
 fi
 
-mv SenseHat/bin/Release/SenseHat.dll SenseHat.dll
+cp SenseHat/bin/Release/SenseHat.dll SenseHat.dll
 
 popd 1>/dev/null 2>&1
 trap 2
