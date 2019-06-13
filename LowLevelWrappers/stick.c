@@ -65,7 +65,7 @@ char* probe_sense_stick() {
             
             evtname[strlen(evtname) - 1] = '\0'; // Remove last '\n'
             
-            char res = !strcmp(evtname, SENSE_INPUT_DEV_NAME); // Compare name with known name of sense stick device
+            int res = !strcmp(evtname, SENSE_INPUT_DEV_NAME); // Compare name with known name of sense stick device
             free(evtname); // Free name buffer
             
             if (res) { // dev path was successfully found
