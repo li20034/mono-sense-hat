@@ -125,7 +125,7 @@ struct stickEvent* get_sense_evt(struct stickDev* obj) {
         return NULL;
     
     // Load data into custom event struct
-    e->timestamp = evt.time.tv_sec + evt.time.tv_usec / 1000000; // Convert timeval struct to double timestamp (in seconds)
+    e->timestamp = evt.time.tv_sec + evt.time.tv_usec / 1000000.0; // Convert timeval struct to double timestamp (in seconds)
     switch (evt.code) {
         case KEY_UP:
             e->dir = DIR_UP;
