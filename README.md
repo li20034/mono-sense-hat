@@ -36,7 +36,7 @@ Written by Zonggao Li and Carson Hall as part of a school project.
 Special thanks to the other members of the LittleMen (Muntaqim Rahman, Kelvin Zhu and Wayne Zhu) for their assistance in debugging, testing and suggesting changes. 
 
 ## Contributing
-We are very open to contributions to help us add new features, bug fixes or for creating/updating proper documentation for the project. Testing on other platforms would also be wonderful.
+We are very open to contributions to help us add new features, bug fixes or for creating/updating proper documentation for the project. Testing on other platforms would also be wonderful. Noteable missing features include gamma adjustment and the ability to draw text on the LED display (gamma adj needs libsense to be updated first).
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
