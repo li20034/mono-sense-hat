@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
@@ -78,11 +78,11 @@ namespace SenseHat
             if (!File.Exists(RTIMU_DEFAULT_SETTINGS_PATH + ".ini")) // Verify that global settings file exists
                 throw new Exception("Cannot find RTIMU global settings file @ " + RTIMU_DEFAULT_SETTINGS_PATH);
 
-            string homePath = Environment.GetEnvironmentVariable("HOME"); // try to get home dir
+            string homePath = Environment.GetEnvironmentVariable("HOME"); // Try to get home dir
 
-            if (string.IsNullOrEmpty(homePath)) // try even harder
+            if (string.IsNullOrEmpty(homePath)) // Try even harder
             {
-                if (getuid() == 0) // make an exception for root. /home/root isn't valid on Debian
+                if (getuid() == 0) // Make an exception for root. /home/root isn't valid on Debian
                     homePath = "/root";
                 else
                     homePath = "/home/" + Environment.UserName;
@@ -92,19 +92,19 @@ namespace SenseHat
 
             if (!File.Exists(localCfgPath + ".ini"))
             {
-                try // try to copy global settings to local file
+                try // Try to copy global settings to local file
                 {
                     Directory.CreateDirectory(Path.Combine(homePath, RTIMU_LOCAL_SETTINGS_DIR_SFX));
                     File.Copy(RTIMU_DEFAULT_SETTINGS_PATH + ".ini", localCfgPath + ".ini");
                 }
-                catch // default to global file if we fail
+                catch // Default to global file if operation fails
                 {
 					Console.Error.WriteLine ("SenseMeasure_WARN: cannot copy settings locally, changes won't persist");
                     localCfgPath = RTIMU_DEFAULT_SETTINGS_PATH;
                 }
             }
 
-            imuPtr = initIMU(localCfgPath); // initialize IMU & RTIMULib bindings
+            imuPtr = initIMU(localCfgPath); // Initialize IMU & RTIMULib bindings
 
             if (imuPtr == IntPtr.Zero)
                 throw new InvalidOperationException("Failed to initialize RTIMULib");
@@ -121,18 +121,19 @@ namespace SenseHat
 		/// <summary>
 		/// Gets the temperature (from humidity sensor).
 		/// </summary>
-		/// <returns>The temperature.</returns>
+		/// <returns>The temperature in degrees Celcius.</returns>
         public double GetTemperature()
         {
             IntPtr dptr = get_raw_humidity(imuPtr);
             if (dptr == IntPtr.Zero)
                 throw new InvalidOperationException("Temperature reading is not valid");
 
+			// Copy data struct from c++ to c#
             double[] data = new double[2];
             Marshal.Copy(dptr, data, 0, 2); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
             free(dptr);
 
-            return data[1];
+            return data[1]; // Extract temp
         }
 
 		/// <summary>
@@ -145,11 +146,12 @@ namespace SenseHat
             if (dptr == IntPtr.Zero)
                 throw new InvalidOperationException("Temperature reading is not valid");
 
+			// Copy data struct from c++ to c#
             double[] data = new double[2];
             Marshal.Copy(dptr, data, 0, 2); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
             free(dptr);
 
-            return data[1];
+            return data[1]; // Extract temp
         }
 
 		/// <summary>
@@ -162,11 +164,12 @@ namespace SenseHat
             if (dptr == IntPtr.Zero)
                 throw new InvalidOperationException("Humidity reading is not valid");
 
+			// Copy data struct from c++ to c#
             double[] data = new double[2];
             Marshal.Copy(dptr, data, 0, 2); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
             free(dptr);
 
-            return data[0];
+            return data[0]; // Extract humidity
         }
 
 		/// <summary>
@@ -179,11 +182,12 @@ namespace SenseHat
             if (dptr == IntPtr.Zero)
                 throw new InvalidOperationException("Pressure reading is not valid");
 
+			// Copy data struct from c++ to c#
             double[] data = new double[2];
             Marshal.Copy(dptr, data, 0, 2); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
             free(dptr);
 
-            return data[0];
+            return data[0]; // Extract pressure
         }
 
 		/// <summary>
@@ -206,7 +210,7 @@ namespace SenseHat
 
             for (int i = 0; i < 3; ++i)
             {
-                degrees[i] = radians[i] / Math.PI * 180; //convert rad to deg
+                degrees[i] = radians[i] / Math.PI * 180; // Convert rad to deg
 
                 if (degrees[i] < 0) //map +-180 to 0 - 360
                     degrees[i] += 360;
@@ -225,6 +229,7 @@ namespace SenseHat
             if (dptr == IntPtr.Zero)
                 return null;
 
+			// Copy data struct from c++ to c#
             double[] data = new double[3];
             Marshal.Copy(dptr, data, 0, 3); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
             free(dptr);
@@ -288,6 +293,7 @@ namespace SenseHat
             if (dptr == IntPtr.Zero)
                 return null;
 
+			// Copy data struct from c++ to c#
             double[] data = new double[3];
             Marshal.Copy(dptr, data, 0, 3); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
             free(dptr);
@@ -345,6 +351,7 @@ namespace SenseHat
             if (dptr == IntPtr.Zero)
                 throw new InvalidOperationException("Timestamp is not valid");
 
+			// Copy data struct from c++ to c#
             double[] timestamp = new double[1];
             Marshal.Copy(dptr, timestamp, 0, 1); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
             free(dptr);
