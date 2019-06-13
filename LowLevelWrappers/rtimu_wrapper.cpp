@@ -16,6 +16,7 @@
 
 using namespace std;
 
+// Contains different IMU related objects object
 struct IMUState {
 	RTIMUSettings* settings;
 	RTPressure* pressure;
@@ -26,26 +27,23 @@ struct IMUState {
 
 extern "C" IMUState* initIMU (const char* config) {
 	IMUState* imuPtr = (IMUState*)malloc(sizeof(IMUState));
-	if (!imuPtr) {
-		//cerr << "Failed to allocate IMUState" << endl;
+	if (!imuPtr)
 		return NULL;
-	}
 	
-	imuPtr->settings = new RTIMUSettings(config); // initialize RTIMU config
+	// Initialize RTIMU config
+	imuPtr->settings = new RTIMUSettings(config);
 	imuPtr->imu = RTIMU::createIMU(imuPtr->settings);
 	imuPtr->pressure = RTPressure::createPressure(imuPtr->settings);	
 	imuPtr->humidity = RTHumidity::createHumidity(imuPtr->settings);
 
-    if (!imuPtr->imu->IMUInit()) {
-        //cerr << "Failed to init IMU" << endl;
+    if (!imuPtr->imu->IMUInit())
         return NULL;
-    }
     
-    // only init pressure and humidity sensors if main IMU inits. Prevents segfaults on fail
+    // Only init pressure and humidity sensors if main IMU inits. Prevents segfaults on fail
 	imuPtr->pressure->pressureInit();
 	imuPtr->humidity->humidityInit();
 
-	imuPtr->IMU_POLL_INTERVAL = imuPtr->imu->IMUGetPollInterval(); // load default polling interval
+	imuPtr->IMU_POLL_INTERVAL = imuPtr->imu->IMUGetPollInterval(); // Load default polling interval
 
 	return imuPtr;
 }
@@ -58,32 +56,38 @@ extern "C" void freeIMU (IMUState* imuPtr) {
 	free(imuPtr);
 }
 
+// Enable/Disable different IMU components
 extern "C" void set_imu_config (IMUState* imuPtr, bool compass_enabled, bool gyro_enabled, bool accel_enabled) {
 	imuPtr->imu->setCompassEnable(compass_enabled);
 	imuPtr->imu->setGyroEnable(gyro_enabled);
 	imuPtr->imu->setAccelEnable(accel_enabled);
 }
 
+// Attempt to read all IMU sensors
 bool readIMU (IMUState* imuPtr) {
-	for (int att = 0; att < 3; ++att) { // retry 3 times when reading IMU
+	for (int att = 0; att < 3; ++att) { // Retry 3 times when reading IMU
 		if (imuPtr->imu->IMURead())
 			return true;
-		usleep(imuPtr->IMU_POLL_INTERVAL * 1000); // wait for poll interval before retry
+		
+		usleep(imuPtr->IMU_POLL_INTERVAL * 1000); // Wait for poll interval before retry
 	}
 
 	return false;
 }
 
-extern "C" double* get_raw_data (IMUState* imuPtr, unsigned char selection) { // TODO: optimize this by putting all data into a struct like the py version does
-	double *result = (double*)malloc(4 * sizeof(double)); // allocate max needed space
-    
-    if (!result) // malloc failed
-        return NULL;
-    
+// Acquire raw data from IMU sensors
+extern "C" double* get_raw_data (IMUState* imuPtr, unsigned char selection) { // TODO: optimize this by putting all data into a struct like the py version does   
+    // Only proceed if data was successfully read
 	if (readIMU(imuPtr)) {
+		double *result = (double*)malloc(4 * sizeof(double)); // Allocate max needed space
+    
+		if (!result) // malloc(size_t size) failed
+			return NULL;
+		
 		const RTIMU_DATA& data = imuPtr->imu->getIMUData();
-        char fail = 0;
+        char fail = 0; // Flags failure to prevent memory leak
         
+        // Switch returned data based on user selection
 		switch (selection) {
 			case RAW_ACCEL:
 				if (data.accelValid) {
@@ -136,7 +140,7 @@ extern "C" double* get_raw_data (IMUState* imuPtr, unsigned char selection) { //
 				break;
 		}
 		
-		if (fail) { // check failure flag and free the ptr before returning NULL
+		if (fail) { // Check failure flag and free the ptr before returning NULL
 		    free(result);
 		    return NULL;
 		}
@@ -147,6 +151,7 @@ extern "C" double* get_raw_data (IMUState* imuPtr, unsigned char selection) { //
 	    return NULL;
 }
 
+// Acquire raw humidity data
 extern "C" double* get_raw_humidity (IMUState* imuPtr) {
 	RTIMU_DATA data;
 	imuPtr->humidity->humidityRead(data);
@@ -164,6 +169,8 @@ extern "C" double* get_raw_humidity (IMUState* imuPtr) {
 	return result;
 }
 
+
+// Acquire raw pressure data
 extern "C" double* get_raw_pres (IMUState* imuPtr) {
 	RTIMU_DATA data;
 	imuPtr->pressure->pressureRead(data);
