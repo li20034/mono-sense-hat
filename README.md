@@ -8,7 +8,7 @@ This library is designed to be used for interaction with the Sense HAT in .NET l
 Testing has only been done with Raspbian.
 The default installation of mono provided on Raspbian may not be compatible with the library. We recommend following the instructions found [here](https://www.mono-project.com/download/stable/#download-lin-raspbian) to install a compatible version. Installation of the msbuild package is also strongly recommended but it may not be required.
 
-All dependancies are automatically retrieved by installation script.
+The following dependancies are automatically retrieved by installation script.
 
 [RTIMULib](https://github.com/RPi-Distro/RTIMULib)
 
