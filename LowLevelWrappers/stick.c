@@ -21,17 +21,20 @@
 
 #define SENSE_INPUT_DEV_NAME "Raspberry Pi Sense HAT Joystick"
 
+// Contains stick device information
 struct stickDev {
     int fd;
     char fail;      
 };
 
+// Contains stick events
 struct stickEvent {
     double timestamp;
     char dir;
     char action;
 };
 
+// Discover dev path
 char* probe_sense_stick() {
     int namelen = strlen(SENSE_INPUT_DEV_NAME);
     DIR* d = opendir("/sys/class/input");
@@ -40,45 +43,40 @@ char* probe_sense_stick() {
     char* p2 = NULL;
     char* evtname;
     
-    //scan directory tree for event*
+    // Scan directory tree for event*
     while ((entry = readdir(d)) != NULL) {
         if (!strncmp(entry->d_name, "event", 5)) {
             strcpy(p, "/sys/class/input/");
             strcat(p, entry->d_name);
             
-            //printf("found entry %s\n", p);
-            
             strcat(p, "/device/name");
             
-            FILE* fp = fopen(p, "r"); // open /sys/class/input/event*
-            fseek(fp, 0, SEEK_END); // seek to end
+            FILE* fp = fopen(p, "r"); // Open /sys/class/input/event*
+            fseek(fp, 0, SEEK_END); // Seek to end
             
-            long fsize = ftell(fp); // get file size
-            //printf("size: %d\n", fsize);
-            evtname = malloc(fsize + 1); //allocate name string buf
-            if (!evtname) // malloc fail!
+            long fsize = ftell(fp); // Get file size
+            evtname = malloc(fsize + 1); // Allocate name string buf
+            if (!evtname) // malloc (size_t size) failed
                 return NULL;            
             
-            fseek(fp, 0, SEEK_SET); // seek to start
-            fgets(evtname, fsize, fp); // read name until term char '\n'
-            fclose(fp); // close
+            fseek(fp, 0, SEEK_SET); // Seek to start
+            fgets(evtname, fsize, fp); // Read name file until termination ('\n')
+            fclose(fp); // Close name file
             
-            evtname[strlen(evtname) - 1] = '\0'; // remove last '\n'
-            //printf("probing %s: %s\n", p, evtname);
+            evtname[strlen(evtname) - 1] = '\0'; // Remove last '\n'
             
-            char res = !strcmp(evtname, SENSE_INPUT_DEV_NAME); // compare name with known name of sense stick device
-            free(evtname); // free name buf
+            char res = !strcmp(evtname, SENSE_INPUT_DEV_NAME); // Compare name with known name of sense stick device
+            free(evtname); // Free name buffer
             
-            if (res) { // we've found the dev
-                p2 = malloc(PATH_MAX + 1); // allocate path buffer
-                if (!p2) // malloc fail!
+            if (res) { // dev path was successfully found
+                p2 = malloc(PATH_MAX + 1); // Allocate path buffer
+                if (!p2) // malloc (size_t size) failed
                     return NULL;
                 
-                // build dev path (in form /dev/input/event*) of the sense stick dev
+                // build dev path of the sense stick dev in form of /dev/input/event*
                 strcpy(p2, "/dev/input/");
                 strcat(p2, entry->d_name);
                 
-                //printf("found sense stick dev @ %s\n", p2);
                 break;
             }
         }
@@ -88,17 +86,17 @@ char* probe_sense_stick() {
     return p2;
 }
 
+// Open sense stick device file
 struct stickDev* open_sense_stick(char* dev, int exclusive) {
-    usleep(75000); // UGLY HACK: prevents "stuck key syndrome" on exclusive grab
+    usleep(75000); // Prevents "stuck key syndrome" on exclusive grab (race condition may occur otherwise)
     
     struct stickDev* obj = malloc(sizeof(struct stickDev));
-    if (!obj) // malloc fail!
+    if (!obj) // malloc (size_t size) failed
         return NULL;
     
-    int fd = open(dev, O_RDONLY); // open /dev/input/event* file
+    int fd = open(dev, O_RDONLY); // Open /dev/input/event* file
     
-    if (fd == -1) {
-        //perror("opening device");
+    if (fd == -1) { // Check for error in opening file
         obj->fail = 1;
         
         return obj;
@@ -107,30 +105,27 @@ struct stickDev* open_sense_stick(char* dev, int exclusive) {
     obj->fd = fd;
     
     if (exclusive) {
-        if (ioctl(fd, EVIOCGRAB, 1) == -1) { // request exclusive grab
-            //perror("grabbing exclusive access");
+        if (ioctl(fd, EVIOCGRAB, 1) == -1) // Request exclusive grab
             obj->fail = 1;
-            
-            return obj;
-        }
     }
     
     return obj;
 }
 
+// Retrieves most recent event from device file
 struct stickEvent* get_sense_evt(struct stickDev* obj) {
     struct input_event evt;
     evt.type = EV_SYN;
     
-    while (evt.type != EV_KEY) // ignore events which are not EV_KEY since stick masquerades as kbd
-        read(obj->fd, &evt, sizeof(struct input_event)); // read event into default struct, blocks until event occurs
+    while (evt.type != EV_KEY) // Ignore events which are not EV_KEY since stick masquerades as kbd
+        read(obj->fd, &evt, sizeof(struct input_event)); // Read event into default struct, blocks until event occurs
         
-    struct stickEvent* e = malloc(sizeof(struct stickEvent)); // allocate custom event struct
-    if (!e) // malloc fail!
+    struct stickEvent* e = malloc(sizeof(struct stickEvent)); // Allocate custom event struct
+    if (!e) // malloc (size_t size) failed
         return NULL;
     
-    // load data into custom event struct
-    e->timestamp = evt.time.tv_sec + evt.time.tv_usec / 1000000; // convert timeval struct to double timestamp (in secs)
+    // Load data into custom event struct
+    e->timestamp = evt.time.tv_sec + evt.time.tv_usec / 1000000; // Convert timeval struct to double timestamp (in seconds)
     switch (evt.code) {
         case KEY_UP:
             e->dir = DIR_UP;
