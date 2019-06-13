@@ -1,4 +1,10 @@
 #!/bin/bash
+grep "Raspbian" /etc/os-release 1>/dev/null 2>&1
+
+if [[ "$?" != 0 ]]; then
+    echo "install.sh: you're not running Raspbian, this may not work as intended"
+fi
+
 if [[ "`id -u`" != "0" ]]; then
     echo "install.sh: only root can do that!"
     exit 1
@@ -19,6 +25,12 @@ trap '' 2
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 pushd "$DIR" 1>/dev/null 2>&1
+
+apt-get install -y sense-hat
+
+if [[ "$?" != 0 ]]; then
+    echo "install.sh: sense-hat package cannot be installed. wrapper compilation could fail"
+fi
 
 rm -rf libsense
 git clone https://github.com/moshegottlieb/libsense
