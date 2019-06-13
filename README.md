@@ -4,7 +4,7 @@ Source code for Sense HAT Mono .NET library
 ## Description
 This library is designed to be used for interaction with the Sense HAT in .NET languages. The code is *mostly* compatible with the [python-sense-hat](https://github.com/RPi-Distro/python-sense-hat) library.
 
-## Dependancies
+## Dependencies
 Testing has only been done with Raspbian.
 The default installation of mono provided on Raspbian may not be compatible with the library. We recommend following the instructions found [here](https://www.mono-project.com/download/stable/#download-lin-raspbian) to install a compatible version. Installation of the msbuild package is also strongly recommended but it may not be required.
 
