@@ -1,0 +1,27 @@
+﻿<Properties>
+  <MonoDevelop.Ide.Workbench ActiveDocument="SenseHat/SenseHat.cs">
+    <Files>
+      <File FileName="SenseHat/SenseHat.cs" Line="5" Column="81" />
+      <File FileName="SenseHat/SenseLED.cs" Line="56" Column="1" />
+      <File FileName="SenseHat/SenseStick.cs" Line="5" Column="19" />
+      <File FileName="SenseHat/SenseMeasure.cs" Line="7" Column="30" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="SenseHat" expanded="True">
+            <Node name="SenseHat" expanded="True">
+              <Node name="SenseHat.cs" selected="True" />
+            </Node>
+          </Node>
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+</Properties>
