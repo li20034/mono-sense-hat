@@ -20,12 +20,14 @@ The following dependencies are automatically retrieved by the installation scrip
   3. Run install.sh as root
   4. Navigate to the SenseHat directory
   5. Run build.sh
+  6. Update Linux shared object caches
 ```bash
 $ git clone https://github.com/li20034/mono-sense-hat
 $ cd mono-sense-hat/LowLevelWrappers
 $ sudo ./install.sh
 $ cd ../SenseHat
 $ ./build.sh
+$ sudo ldconfig
 ```
 Note: Keep the folder of the cloned repository around (for uninstallation and faster updates)
 
