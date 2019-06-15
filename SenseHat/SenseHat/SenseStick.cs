@@ -38,7 +38,11 @@ namespace SenseHat
 
         // Open the linux device file for the joystick from the given dev name
         [DllImport("stick.so")]
-        private static extern IntPtr open_sense_stick(string dev, int exclusive);
+        private static extern IntPtr open_sense_stick(string dev, sbyte exclusive);
+        
+        // Closes and frees all sense stick and all related resources
+        [DllImport("stick.so")]
+        private static extern void close_sense_stick(IntPtr dev);
 
         // Probe to discover the dev name for the joystick
         [DllImport("stick.so")]
@@ -83,7 +87,7 @@ namespace SenseHat
             string dev_name = probe_sense_stick();
 
             if (!string.IsNullOrEmpty(dev_name)) // If device name is valid, open Joystick device
-                stick_dev = open_sense_stick(dev_name, (exclusive) ? 1 : 0);
+                stick_dev = open_sense_stick(dev_name, (sbyte)((exclusive) ? 1 : 0));
             else
                 throw new InvalidOperationException("Cannot open sense stick");
 
@@ -103,7 +107,7 @@ namespace SenseHat
         ~SenseStick()
         {
             workerThd.Abort();
-            free(stick_dev);
+            close_sense_stick(stick_dev);
             instance = false;
         }
 

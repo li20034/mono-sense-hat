@@ -24,7 +24,7 @@
 // Contains stick device information
 struct stickDev {
     int fd;
-    char fail;      
+    char exclusive;
 };
 
 // Contains stick events
@@ -87,29 +87,41 @@ char* probe_sense_stick() {
 }
 
 // Open sense stick device file
-struct stickDev* open_sense_stick(char* dev, int exclusive) {
+struct stickDev* open_sense_stick(char* dev, char exclusive) {
     usleep(75000); // Prevents "stuck key syndrome" on exclusive grab (race condition may occur otherwise)
+    
+    int fd = open(dev, O_RDONLY); // Open /dev/input/event* file
+    if (fd == -1) // Check for error in opening file
+        return NULL;
     
     struct stickDev* obj = malloc(sizeof(struct stickDev));
     if (!obj) // malloc (size_t size) failed
         return NULL;
     
-    int fd = open(dev, O_RDONLY); // Open /dev/input/event* file
-    
-    if (fd == -1) { // Check for error in opening file
-        obj->fail = 1;
-        
-        return obj;
-    }
-    
     obj->fd = fd;
     
-    if (exclusive) {
-        if (ioctl(fd, EVIOCGRAB, 1) == -1) // Request exclusive grab
-            obj->fail = 1;
+    if (exclusive) {      
+        if (ioctl(fd, EVIOCGRAB, 1) == -1) { // Request exclusive grab
+            close(fd); // Close dev input node
+            free(obj); // Free object
+            return NULL;
+        }
+        
+        obj->exclusive = 1;
     }
+    else
+        obj->exclusive = 0;
     
     return obj;
+}
+
+// Properly closes and frees sense stick device resources
+void close_sense_stick(struct stickDev* dev) {
+    if (dev->exclusive)
+        ioctl(dev->fd, EVIOCGRAB, 0); // Release exclusive grab (if held)
+    
+    close(dev->fd); // Close dev input node
+    free(dev); // Free stickDev object
 }
 
 // Retrieves most recent event from device file
