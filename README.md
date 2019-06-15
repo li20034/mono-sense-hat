@@ -32,7 +32,7 @@ $ sudo ldconfig
 Note: Keep the folder of the cloned repository around (for uninstallation and faster updates)
 
 ## Uninstallation
-  1. Navigate to the directory of the clone repository you previously kept
+  1. Navigate to the directory of the cloned repository that you previously kept
   2. Run uninstall.sh as root
   3. Remove the sense hat package if needed
 ```bash
