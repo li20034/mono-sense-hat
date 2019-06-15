@@ -129,8 +129,10 @@ struct stickEvent* get_sense_evt(struct stickDev* obj) {
     struct input_event evt;
     evt.type = EV_SYN;
     
-    while (evt.type != EV_KEY) // Ignore events which are not EV_KEY since stick masquerades as kbd
-        read(obj->fd, &evt, sizeof(struct input_event)); // Read event into default struct, blocks until event occurs
+    while (evt.type != EV_KEY) { // Ignore events which are not EV_KEY since stick masquerades as kbd
+        if (read(obj->fd, &evt, sizeof(struct input_event)) == -1) // Read event into default struct, blocks until event occurs
+            return NULL; // abort on failed read
+    }
         
     struct stickEvent* e = malloc(sizeof(struct stickEvent)); // Allocate custom event struct
     if (!e) // malloc (size_t size) failed
