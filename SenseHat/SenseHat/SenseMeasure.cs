@@ -76,7 +76,7 @@ namespace SenseHat
         public void Init()
         {
             if (!File.Exists(RTIMU_DEFAULT_SETTINGS_PATH + ".ini")) // Verify that global settings file exists
-                throw new Exception("Cannot find RTIMU global settings file @ " + RTIMU_DEFAULT_SETTINGS_PATH);
+                throw new FileNotFoundException("Cannot find RTIMU global settings file @ " + RTIMU_DEFAULT_SETTINGS_PATH + ".ini");
 
             string homePath = Environment.GetEnvironmentVariable("HOME"); // Try to get home dir
 
