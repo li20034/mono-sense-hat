@@ -101,7 +101,7 @@ namespace SenseHat
             instance = false;
         }
         
-        public byte[] rgb565_to_888(ushort raw) {
+        public static byte[] rgb565_to_888(ushort raw) {
             byte rb = (byte)(raw & 31);
             byte rg = (byte)((raw >> 5) & 63);
             byte rr = (byte)((raw >> 11) & 31);
