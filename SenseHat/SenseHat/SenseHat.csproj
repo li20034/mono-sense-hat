@@ -39,6 +39,7 @@
     <Compile Include="SenseLED.cs" />
     <Compile Include="SenseStick.cs" />
     <Compile Include="SenseMeasure.cs" />
+    <Compile Include="SenseLEDFont.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

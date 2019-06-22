@@ -100,7 +100,20 @@ namespace SenseHat
             sense_free_bitmap(fb2ptr);
             instance = false;
         }
-
+        
+        public byte[] rgb565_to_888(ushort raw) {
+            byte rb = (byte)(raw & 31);
+            byte rg = (byte)((raw >> 5) & 63);
+            byte rr = (byte)((raw >> 11) & 31);
+            
+            byte[] px = new byte[3];
+            px[0] = (byte)(rr * 255 / 31);
+            px[1] = (byte)(rg * 255 / 63);
+            px[2] = (byte)(rb * 255 / 31);
+            
+            return px;
+        }
+        
         /// <summary>
         /// Copy the back buffer into the front buffer (with rotations)
         /// </summary>
@@ -187,12 +200,7 @@ namespace SenseHat
                 dt = ((ushort*)bufPtr)[(y << 3) | x]; // Get the RGB565 raw pixel data (using bitshifts to locate pixel)
             }
 
-            // Extract R, G, B and convert/zero pad to 888
-            px[0] = (byte)((dt >> 8) & 248);
-            px[1] = (byte)((dt >> 3) & 252);
-            px[2] = (byte)(((uint)dt << 3) & 248);
-
-            return px;
+            return rgb565_to_888(dt);
         }
 
         /// <summary>
@@ -424,12 +432,154 @@ namespace SenseHat
         }
         
         /// <summary>
+        /// Converts contents of front/back buffer into a bitmap
+        /// </summary>
+        /// <param name="redraw">If set to <c>true</c> use back buffer, otherwise use front buffer.</param>
+        public Bitmap ToBitmap(bool buffer = true) {
+            Bitmap bmp = new Bitmap(8, 8);
+            
+            Rectangle rect = new Rectangle(0, 0, 8, 8);
+            BitmapData dt = bmp.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb); // Get internal data array of bitmap obj
+            IntPtr bufPtr = sense_bitmap_get_buffer((buffer) ? fb2ptr : fbptr); // Select front/back buffer
+
+            unsafe {
+                uint* arr = (uint*)dt.Scan0; // Cast to array of 32 bit ARGB
+                ushort* buf = (ushort*)bufPtr; // Cast back buffer address to array
+
+                // Extract RGB565 from buffer, convert to 32-bit ARGB, write to bitmap object
+                for (int i = 0; i < 64; ++i) {
+                    byte[] px = rgb565_to_888(buf[i]);
+                    
+                    uint bpx = (uint)(px[2] | (px[1] << 8) | (px[0] << 16) | 0xff000000);
+                    arr[i] = bpx;
+                }
+            }
+
+            bmp.UnlockBits (dt); // Release bitmap raw bit lock
+            return bmp;
+        }
+        
+        /// <summary>
+        /// Saves front/back buffer to a PNG file
+        /// </summary>
+        /// <param name="path">Path to save the image to</param>
+        /// <param name="redraw">If set to <c>true</c> use back buffer, otherwise use front buffer.</param>
+        public void SaveBitmap(string path, bool buffer = true) {
+            ToBitmap(buffer).Save(path, ImageFormat.Png);
+        }
+        
+        /// <summary>
         /// Draws an image file onto the back buffer
         /// </summary>
         /// <param name="path">Path to desired image file</param>
         /// <param name="interpMode">Interpolation mode for scaling, default is high quality bicubic</param>
         public void DrawImage(string path, InterpolationMode interpMode = InterpolationMode.HighQualityBicubic) {
             DrawBitmapScaled(new Bitmap(path), interpMode); // Create bitmap obj from file, then call scaled draw
+        }
+        
+        /// <summary>
+        /// Draws a letter onto the back buffer
+        /// </summary>
+        /// <param name="ltr">Character to draw on screen</param>
+        /// <param name="color">Letter color in RGB565</param>
+        /// <param name="font">Font to draw letter with</param>
+        public void ShowLetter(char ltr, ushort color, ulong[] font) {
+            // Calculate index in array for letter (+2 is for skipping over dimensions)
+            byte w = (byte)font[0], h = (byte)font[1], bitLen = (byte)(w * h);
+            byte idx = (byte)(ltr - SenseLEDFont.startChar + 2);
+            
+            ulong bits = font[idx];
+            
+            IntPtr bufPtr = sense_bitmap_get_buffer(fb2ptr); // Get internal data array of back buffer
+            
+            unsafe {
+                ushort* buf = (ushort*)bufPtr; // Cast back buffer address to array
+                
+                for (byte y = 0; y < h; ++y) {
+                    for (byte x = 0; x < w; ++x) {
+                        byte bit = (byte)((bits >> (bitLen - y * h - x - 1)) & 1);
+                        buf[(y << 3) | x] = (bit == 1) ? color : (ushort)0;
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Draws a letter onto the back buffer
+        /// </summary>
+        /// <param name="ltr">Character to draw on screen</param>
+        /// <param name="color">Letter color</param>
+        /// <param name="font">Font to draw letter with</param>
+        public void ShowLetter(char ltr, Color color, ulong[] font) {
+            ShowLetter(ltr, sense_make_color_rgb(color.R, color.G, color.B), font);
+        }
+        
+        /// <summary>
+        /// Draws a letter onto the back buffer
+        /// </summary>
+        /// <param name="ltr">Character to draw on screen</param>
+        /// <param name="color">Letter color in RGB888 byte[]</param>
+        /// <param name="font">Font to draw letter with</param>
+        public void ShowLetter(char ltr, byte[] color, ulong[] font) {
+            ShowLetter(ltr, sense_make_color_rgb(color[0], color[1], color[2]), font);
+        }
+        
+        /// <summary>
+        /// Draws a letter onto the back buffer with default font
+        /// </summary>
+        /// <param name="ltr">Character to draw on screen</param>
+        /// <param name="color">Letter color</param>
+        public void ShowLetter(char ltr, Color color) {
+            ShowLetter(ltr, sense_make_color_rgb(color.R, color.G, color.B), SenseLEDFont.defaultFont);
+        }
+        
+        /// <summary>
+        /// Draws a letter onto the back buffer with default font
+        /// </summary>
+        /// <param name="ltr">Character to draw on screen</param>
+        /// <param name="color">Letter color in RGB888 byte[]</param>
+        public void ShowLetter(char ltr, byte[] color) {
+            ShowLetter(ltr, sense_make_color_rgb(color[0], color[1], color[2]), SenseLEDFont.defaultFont);
+        }
+        
+        /// <summary>
+        /// Draws a letter onto the back buffer with default font and color
+        /// </summary>
+        /// <param name="ltr">Character to draw on screen</param>
+        public void ShowLetter(char ltr) {
+            ShowLetter(ltr, 0x7fff, SenseLEDFont.defaultFont);
+        }
+        
+        /// <summary>
+        /// Shows a scrolling message on front buffer
+        /// </summary>
+        /// <param name="msg">Message to show</param> 
+        /// <param name="color">RGB565 color to show message in</param>
+        /// <param name="scroll_speed">Rate to scroll message at</param>
+        public void ShowMessage(string msg, ushort color = 0x7fff, float scroll_speed = 0.1f) {
+            Console.WriteLine("FIXME: ShowMessage function stub called!");
+            
+            //throw new NotImplementedException("FIXME: ShowMessage function stub called!");
+        }
+        
+        /// <summary>
+        /// Shows a scrolling message on front buffer
+        /// </summary>
+        /// <param name="msg">Message to show</param> 
+        /// <param name="color">RGB565 color to show message in</param>
+        /// <param name="scroll_speed">Rate to scroll message at</param>
+        public void ShowMessage(string msg, Color color, float scroll_speed = 0.1f) {
+            ShowMessage(msg, sense_make_color_rgb(color.R, color.G, color.B), scroll_speed);
+        }
+        
+        /// <summary>
+        /// Shows a scrolling message on front buffer
+        /// </summary>
+        /// <param name="msg">Message to show</param> 
+        /// <param name="color">RGB565 color to show message in</param>
+        /// <param name="scroll_speed">Rate to scroll message at</param>
+        public void ShowMessage(string msg, byte[] color, float scroll_speed = 0.1f) {
+            ShowMessage(msg, sense_make_color_rgb(color[0], color[1], color[2]), scroll_speed);
         }
         
         /// <summary>
