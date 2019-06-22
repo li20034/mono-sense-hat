@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Drawing.Drawing2D;
 
 namespace SenseHat
 {
@@ -52,7 +53,7 @@ namespace SenseHat
         private byte rot; // Rotation of LED matrix value
         private static bool instance = false; // Block multiple instances of object
 
-        // Constants for LED buffer rotation
+        // Constants for LED buffer rotation/flip
         public static class Rotation
         {
             public const byte deg_0     = 0; // Degrees
@@ -67,6 +68,9 @@ namespace SenseHat
             public const byte rad_0_5pi = 1;
             public const byte rad_pi    = 2;
             public const byte rad_1_5pi = 3;
+            
+            public const byte flip_h    = 4;
+            public const byte flip_v    = 5;
         }
 
         public SenseLED()
@@ -124,27 +128,34 @@ namespace SenseHat
                         for (byte y = 0; y < 8; ++y)
                         {
                             for (byte x = 0; x < 8; ++x)
-                            {
                                 front[(x << 3) | (7 - y)] = back[(y << 3) | x];
-                            }
                         }
                         return;
                     case Rotation.deg_180:
                         for (byte y = 0; y < 8; ++y)
                         {
                             for (byte x = 0; x < 8; ++x)
-                            {
                                 front[((7 - y) << 3) | (7 - x)] = back[(y << 3) | x];
-                            }
                         }
                         return;
                     case Rotation.deg_270:
                         for (byte y = 0; y < 8; ++y)
                         {
                             for (byte x = 0; x < 8; ++x)
-                            {
                                 front[((7 - x) << 3) | y] = back[(y << 3) | x];
-                            }
+                        }
+                        return;
+                        
+                    case Rotation.flip_h:
+                        for (byte y = 0; y < 8; ++y) {
+                            for (byte x = 0; x < 8; ++x)
+                                front[(y << 3) | (7 - x)] = back[(y << 3) | x];
+                        }
+                        return;
+                    case Rotation.flip_v:
+                        for (byte y = 0; y < 8; ++y) {
+                            for (byte x = 0; x < 8; ++x)
+                                front[((7 - y) << 3) | x] = back[(y << 3) | x];
                         }
                         return;
                 }
@@ -390,7 +401,37 @@ namespace SenseHat
 
             bmp.UnlockBits (dt); // Release bitmap raw bit lock
         }
-
+        
+        /// <summary>
+        /// Draws a bitmap onto back buffer (and scale to 8x8)
+        /// </summary>
+        /// <param name="bmp">Desired bitmap to display</param>
+        /// <param name="interpMode">Interpolation mode for scaling, default is high quality bicubic</param>
+        public void DrawBitmapScaled(Bitmap bmp, InterpolationMode interpMode = InterpolationMode.HighQualityBicubic) {
+            if (bmp.Height == 8 && bmp.Width == 8) { // If size is correct, skip rescale code
+                DrawBitmap(bmp);
+                return;
+            }
+            
+            Bitmap bmp2 = new Bitmap(8, 8); // Allocate scaled bitmap buffer
+            Graphics g = Graphics.FromImage(bmp2); // Create graphics object on buffer
+            
+            g.InterpolationMode = interpMode; // Set scaling interpolation mode
+            g.DrawImage(bmp, 0, 0, 8, 8); // Draw image, scaling to 8x8
+            g.Dispose(); // Cleanup graphics obj
+            
+            DrawBitmap(bmp2); // Draw the scaled buffer
+        }
+        
+        /// <summary>
+        /// Draws an image file onto the back buffer
+        /// </summary>
+        /// <param name="path">Path to desired image file</param>
+        /// <param name="interpMode">Interpolation mode for scaling, default is high quality bicubic</param>
+        public void DrawImage(string path, InterpolationMode interpMode = InterpolationMode.HighQualityBicubic) {
+            DrawBitmapScaled(new Bitmap(path), interpMode); // Create bitmap obj from file, then call scaled draw
+        }
+        
         /// <summary>
         /// Clear the contents of the back buffer. Redraws by default.
         /// </summary>
