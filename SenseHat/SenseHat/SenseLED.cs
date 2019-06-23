@@ -76,6 +76,19 @@ namespace SenseHat
 
         public SenseLED()
         {
+            Init();
+        }
+
+        // Destroy everything mercilessly
+        ~SenseLED()
+        {
+            Free();
+        }
+        
+        /// <summary>
+        /// Initializes SenseLED internals
+        /// </summary>
+        public void Init() {
             if (instance) // Block multiple instances
                 throw new InvalidOperationException ("Multiple instances of SenseLED not permitted");
 
@@ -93,10 +106,14 @@ namespace SenseHat
             sense_bitmap_paint(fbptr, 0);
             sense_bitmap_paint(fb2ptr, 0);
         }
-
-        // Destroy everything mercilessly
-        ~SenseLED()
-        {
+        
+        /// <summary>
+        /// Destroys this instance of SenseLED
+        /// </summary>
+        public void Free() {
+            if (!instance)
+                return;
+            
             sense_free_bitmap(fbptr);
             sense_free_bitmap(fb2ptr);
             instance = false;

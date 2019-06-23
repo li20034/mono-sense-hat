@@ -78,6 +78,22 @@ namespace SenseHat
         /// <param name="manualPoll">Don't automatically retrieve events</param>
         public SenseStick(bool exclusive = true, bool manualPoll = false)
         {
+            Init(exclusive, manualPoll);
+        }
+
+        /// <summary>
+        /// Releases unmanaged resources and performs other cleanup operations before the <see cref="SenseHat.SenseStick"/> is
+        /// reclaimed by garbage collection.
+        /// </summary>
+        ~SenseStick()
+        {
+            Free();
+        }
+        
+        /// <summary>
+        /// Initializes SenseStick internals
+        /// </summary>
+        public void Init(bool exclusive = true, bool manualPoll = false) {
             if (instance) // Block new class creation if instance already exists
                 throw new InvalidOperationException ("Multiple instances of SenseStick not permitted");
 
@@ -99,18 +115,19 @@ namespace SenseHat
             if (!manualPoll)
                 initWorker ();
         }
-
+        
         /// <summary>
-        /// Releases unmanaged resources and performs other cleanup operations before the <see cref="SenseHat.SenseStick"/> is
-        /// reclaimed by garbage collection.
+        /// Destroys this instance of SenseStick
         /// </summary>
-        ~SenseStick()
-        {
+        public void Free() {
+            if (!instance)
+                return;
+            
             workerThd.Abort();
             close_sense_stick(stick_dev);
             instance = false;
         }
-
+        
         /// <summary>
         /// Sets the manual mode.
         /// </summary>

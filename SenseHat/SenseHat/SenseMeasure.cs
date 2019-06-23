@@ -55,17 +55,12 @@ namespace SenseHat
 
         public SenseMeasure()
         {
-            if (instance)
-                throw new InvalidOperationException ("Multiple instances of SenseMeasure not permitted");
-
-            instance = true;
             Init();
         }
 
         ~SenseMeasure()
         {
             Free();
-            instance = false;
         }
 
         private IntPtr imuPtr; // Pointer to RTIMU object
@@ -75,6 +70,11 @@ namespace SenseHat
         /// </summary>
         public void Init()
         {
+            if (instance)
+                throw new InvalidOperationException ("Multiple instances of SenseMeasure not permitted");
+
+            instance = true;
+        
             if (!File.Exists(RTIMU_DEFAULT_SETTINGS_PATH + ".ini")) // Verify that global settings file exists
                 throw new FileNotFoundException("Cannot find RTIMU global settings file @ " + RTIMU_DEFAULT_SETTINGS_PATH + ".ini");
 
@@ -115,7 +115,11 @@ namespace SenseHat
         /// </summary>
         public void Free()
         {
+            if (!instance)
+                return;
+            
             freeIMU(imuPtr);
+            instance = false;
         }
 
         /// <summary>
