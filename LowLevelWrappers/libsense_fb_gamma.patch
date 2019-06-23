@@ -64,7 +64,7 @@
 +    if (!fb->isfb)
 +        return;
 +        
-+    ioctl(fb->fd, SENSE_FBIOGET_GAMMA, gamma);
++    ioctl(fb->fd, SENSE_FBIOSET_GAMMA, gamma);
 +}
 +
 +void sense_fb_reset_gamma(sense_bitmap_t fb) {
