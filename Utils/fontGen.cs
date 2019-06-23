@@ -51,9 +51,6 @@ namespace fontGen {
         }
         
         static void Main(string[] args) {
-            /*if (args.Length != 1)
-                return;*/
-        
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
             string fontSrcPath = Path.Combine(basePath, "sense_hat_text.png");
             string fontTxtPath = Path.Combine(basePath, "sense_hat_text.txt");
@@ -63,40 +60,10 @@ namespace fontGen {
             string fontChars = sr.ReadLine();
             sr.Close();
             
-            // Test code
-            /*byte which = Convert.ToByte(args[0]);
-            Bitmap charImg = extractCharImg(fontSrc, which);
-            //charImg.Save(string.Format("char{0}.png", which), ImageFormat.Png);
-            ulong bits = tileToBits(charImg);
-            
-            string hex = string.Format("0x{0:x}", bits);
-            Console.WriteLine(hex);
-            
-            string pfx = "";
-            Console.Write("public static ulong[] defaultFont = {\n    5, 8,\n    ");
-            for (byte i = 0; i < (byte)(fontSrc.Height / 5); ++i) {
-                Bitmap charImg = extractCharImg(fontSrc, i);
-                ulong bits = tileToBits(charImg);
-                string hex = string.Format("0x{0:x}", bits);
-                
-                Console.Write(pfx + hex);
-                pfx = ", ";
-                
-                if (i % 10 == 0 && i != 0) {
-                    Console.Write(", \n    ");
-                    pfx = "";
-                }
-            }
-            
-            Console.WriteLine("\n};");*/
-            
             if (string.IsNullOrEmpty(fontChars))
                 return;
-                
-            ulong[] font = new ulong[95];
-            for (byte i = 0; i < font.Length; ++i)
-                font[i] = 0;
             
+            ulong[] font = new ulong[95];
             for (byte i = 0; i < fontChars.Length; ++i) {
                 Bitmap charImg = extractCharImg(fontSrc, i);
                 ulong bits = tileToBits(charImg);
