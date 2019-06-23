@@ -36,7 +36,11 @@ namespace fontGen {
                 for (int i = 0; i < 40; ++i) {
                     uint px = arr[i] & 0xffffff;
                     
-                    if (px > 0xffffff - px)
+                    byte b = (byte)(px & 255);
+                    byte g = (byte)((px >> 8) & 255);
+                    byte r = (byte)((px >> 16) & 255);
+                    
+                    if ((ushort)r + g + b > 382)
                         bits |= 1ul << (39 - i);
                 }
             }
@@ -101,7 +105,7 @@ namespace fontGen {
             }
             
             string pfx = "";
-            Console.Write("public static ulong[] defaultFont = {\n    5, 8,\n    ");
+            Console.Write("public static readonly ulong[] defaultFont = {\n    5, 8,\n    ");
             for (byte i = 0; i < font.Length; ++i) {
                 ulong bits = font[i];
                 string hex = string.Format("0x{0:x}", bits);

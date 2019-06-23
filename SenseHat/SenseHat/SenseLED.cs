@@ -484,7 +484,7 @@ namespace SenseHat
         /// <param name="ltr">Character to draw on screen</param>
         /// <param name="color">Letter color in RGB565</param>
         /// <param name="font">Font to draw letter with</param>
-        public void ShowLetter(char ltr, ushort color = 0x7fff, ushort font = SenseLEDFont.defaultFont) {
+        public void ShowLetter(char ltr, ushort color = 0x7bef, ushort font = SenseLEDFont.defaultFont) {
             ulong[] fontData = SenseLEDFont.getFontById(font); // Retrieve font data
             // Calculate index in array for letter (+2 is for skipping over dimensions)
             byte w = (byte)fontData[0], h = (byte)fontData[1], bitLen = (byte)(w * h);
@@ -532,7 +532,7 @@ namespace SenseHat
         /// <param name="msg">Message to show</param> 
         /// <param name="color">RGB565 color to show message in</param>
         /// <param name="scroll_delay">Delay between scroll update events (ms)</param>
-        public void ShowMessage(string msg, ushort color = 0x7fff, ushort font = SenseLEDFont.defaultFont, int scroll_delay = 100) {
+        public void ShowMessage(string msg, ushort color = 0x7bef, ushort font = SenseLEDFont.defaultFont, int scroll_delay = 100) {
             IntPtr bufPtr = sense_bitmap_get_buffer(fb2ptr); // Get ptr to back buffer
             
             ulong[] fontData = SenseLEDFont.getFontById(font);
