@@ -47,6 +47,33 @@ namespace SenseHat
         // Copy contents between two buffers
         [DllImport("libsense.so")]
         private static extern void sense_bitmap_cpy(IntPtr dst, IntPtr src);
+        
+        // Libc instance of free
+        [DllImport("libc.so.6")]
+        private static extern void free(IntPtr ptr);
+        
+        // Gamma functions. Requires patched libsense (libsense_fb_gamma.patch)
+        
+        // Set sense hat gamma (sbyte[] needs 32 values, value range is 0 - 31)
+        [DllImport("libsense.so")]
+        private static extern void sense_fb_set_gamma(IntPtr fb, sbyte[] gamma);
+        
+        // Get gamma settings from kernel driver
+        [DllImport("libsense.so")]
+        private static extern IntPtr sense_fb_get_gamma(IntPtr fb);
+        
+        // Reset gamma settings to default
+        [DllImport("libsense.so")]
+        private static extern void sense_fb_reset_gamma(IntPtr fb);
+        
+        // Apply low light mode gamma settings
+        [DllImport("libsense.so")]
+        private static extern void sense_fb_set_lowlight(IntPtr fb, sbyte val);
+        
+        // Check if low light mode is enabled
+        [DllImport("libsense.so")]
+        private static extern sbyte sense_fb_get_lowlight(IntPtr fb);
+        
 
         //             front buffer         back buffer
         private IntPtr fbptr = IntPtr.Zero, fb2ptr = IntPtr.Zero;
@@ -105,6 +132,9 @@ namespace SenseHat
             // Clear all displays
             sense_bitmap_paint(fbptr, 0);
             sense_bitmap_paint(fb2ptr, 0);
+            
+            // Reset all gamma settings
+            //ResetGamma();
         }
         
         /// <summary>
@@ -693,6 +723,66 @@ namespace SenseHat
         public void Fill(byte[] c)
         {
             sense_bitmap_paint(fb2ptr, sense_make_color_rgb(c[0], c[1], c[2]));
+        }
+        
+        
+        // Gamma functions, requires patched libsense (libsense_fb_gamma.patch)
+        
+        /// <summary>
+        /// Gets the current gamma look up table
+        /// </summary>
+        /// <returns>Signed byte array representing the gamma LUT (32 values ranging from 0 - 31)</returns>
+        public sbyte[] GetGamma() {
+            IntPtr gammaPtr = sense_fb_get_gamma(fbptr);
+            if (gammaPtr == IntPtr.Zero)
+                throw new InvalidOperationException("Failed to get gamma table from SenseHat framebuffer");
+            
+            sbyte[] gamma = new sbyte[32];
+            
+            // Copy C return values into C# array
+            unsafe {
+                sbyte* arr = (sbyte*)gammaPtr;
+                for (byte i = 0; i < 32; ++i)
+                    gamma[i] = arr[i];
+            }
+            
+            free(gammaPtr);
+            return gamma;
+        }
+        
+        /// <summary>
+        /// Sets gamma look up table values
+        /// </summary>
+        /// <param name="gamma">Array of 32 signed bytes (ranging from 0 - 31) representing the gamma LUT</param>
+        public void SetGamma(sbyte[] gamma) {
+            sense_fb_set_gamma(fbptr, gamma);
+        }
+        
+        /// <summary>
+        /// Resets gamma look up table values to default
+        /// </summary>
+        public void ResetGamma() {
+            sense_fb_reset_gamma(fbptr);
+        }
+        
+        /// <summary>
+        /// Gets low light mode value
+        /// </summary>
+        /// <returns><c>true</c> if low light mode is enabled, otherwise <c>false</c></returns>
+        public bool GetLowLight() {
+            sbyte ret = sense_fb_get_lowlight(fbptr);
+            if (ret == -1)
+                throw new InvalidOperationException("Failed to determine current low light setting");
+            
+            return ret == 1;
+        }
+        
+        /// <summary>
+        /// Set low light mode
+        /// </summary>
+        /// <param name="val">If <c>true</c> enable low light mode, else disable it</param>
+        public void SetLowLight(bool val) {
+            sense_fb_set_lowlight(fbptr, (sbyte)((val) ? 1 : 0));
         }
     }
 }

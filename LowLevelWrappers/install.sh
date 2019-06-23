@@ -41,6 +41,7 @@ fi
 rm -rf libsense
 git clone https://github.com/moshegottlieb/libsense
 cd libsense
+patch < ../libsense_fb_gamma.patch
 make clean
 make
 make install

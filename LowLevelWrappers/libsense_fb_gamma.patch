@@ -1,0 +1,96 @@
+--- fb.c	2019-06-23 13:34:15.928972858 -0400
++++ fb.new.c	2019-06-23 13:30:26.252976971 -0400
+@@ -10,6 +10,14 @@
+ #include <sys/mman.h>
+ #include <unistd.h>
+  
++#define SENSE_FBIOGET_GAMMA 61696
++#define SENSE_FBIOSET_GAMMA 61697
++#define SENSE_FBIORESET_GAMMA 61698
++#define SENSE_FB_GAMMA_DEFAULT 0
++#define SENSE_FB_GAMMA_LOW 1
++//#define SENSE_FB_GAMMA_USER 2
++
++char lowlight_gamma[32] = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 10, 10};
+ 
+ static int _sense_err = 0;
+ 
+@@ -30,7 +38,9 @@
+ 
+ struct sense_bitmap {
+     uint16_t* bmp;
+-    void (*dtor)(sense_bitmap_t);    
++    int fd;
++    char isfb;
++    void (*dtor)(sense_bitmap_t);
+ };
+ 
+ void _sense_bitmap_fb_free(sense_bitmap_t bmp){
+@@ -70,6 +80,8 @@
+                     ret = (sense_bitmap_t)malloc(sizeof(struct sense_bitmap));
+                     ret->bmp = (uint16_t*)mmap(NULL,SENSE_BUFFER_SIZE ,PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+                     ret->dtor = _sense_bitmap_fb_free;
++                    ret->fd = fd;
++                    ret->isfb = 1;
+                     if (!ret->bmp){
+                         sense_free_bitmap(ret);
+                         ret = NULL;
+@@ -89,6 +101,7 @@
+     sense_bitmap_t ret = (sense_bitmap_t)malloc(sizeof(struct sense_bitmap));
+     ret->bmp = (uint16_t*)malloc(SENSE_BUFFER_SIZE);
+     ret->dtor = _sense_bitmap_mem_free;
++    ret->isfb = 0;
+     return ret;
+ }
+ 
+@@ -136,3 +149,50 @@
+     for (i=0;i<SENSE_PIXELS;++i) buffer[i] = color;
+     memcpy(bmp->bmp,buffer,SENSE_BUFFER_SIZE);
+ }
++
++char* sense_fb_get_gamma(sense_bitmap_t fb) {
++    if (!fb->isfb)
++        return NULL;
++        
++    char* buf = malloc(32);
++    if (!buf)
++        return NULL;
++    
++    ioctl(fb->fd, SENSE_FBIOGET_GAMMA, buf);
++    return buf;
++}
++
++void sense_fb_set_gamma(sense_bitmap_t fb, char* gamma) {
++    if (!fb->isfb)
++        return;
++        
++    ioctl(fb->fd, SENSE_FBIOGET_GAMMA, gamma);
++}
++
++void sense_fb_reset_gamma(sense_bitmap_t fb) {
++    if (!fb->isfb)
++        return;
++        
++    ioctl(fb->fd, SENSE_FBIORESET_GAMMA, SENSE_FB_GAMMA_DEFAULT);
++}
++
++void sense_fb_set_lowlight(sense_bitmap_t fb, char val) {
++    if (!fb->isfb)
++        return;
++
++    ioctl(fb->fd, SENSE_FBIORESET_GAMMA, (val) ? SENSE_FB_GAMMA_LOW : SENSE_FB_GAMMA_DEFAULT);
++}
++
++char sense_fb_get_lowlight(sense_bitmap_t fb) {
++    char* gamma = sense_fb_get_gamma(fb);
++    if (!gamma)
++        return -1;
++    
++    char i;
++    for (i = 0; i < 32; ++i) {
++        if (gamma[i] != lowlight_gamma[i])
++            return 0;
++    }
++    
++    return 1;
++}
