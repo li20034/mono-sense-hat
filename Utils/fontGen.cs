@@ -34,7 +34,7 @@ namespace fontGen {
                 uint* arr = (uint*)dt.Scan0;
                 
                 for (int i = 0; i < 40; ++i) {
-                    uint px = arr[i] & 0xffffff;
+                    uint px = arr[i];
                     
                     byte b = (byte)(px & 255);
                     byte g = (byte)((px >> 8) & 255);
