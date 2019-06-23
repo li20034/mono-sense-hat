@@ -32,6 +32,12 @@ if [[ "$?" != 0 ]]; then
     echo "install.sh: sense-hat package cannot be installed. wrapper compilation could fail"
 fi
 
+apt-get install -y gcc g++ make
+
+if [[ "$?" != 0 ]]; then
+    echo "install.sh: unable to install compilers. wrapper compilation could fail"
+fi
+
 rm -rf libsense
 git clone https://github.com/moshegottlieb/libsense
 cd libsense
