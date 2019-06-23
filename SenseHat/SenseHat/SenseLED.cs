@@ -755,7 +755,7 @@ namespace SenseHat
         /// </summary>
         /// <param name="gamma">Array of 32 signed bytes (ranging from 0 - 31) representing the gamma LUT</param>
         public void SetGamma(sbyte[] gamma) {
-            if (gamma.Length != 32) {
+            if (gamma.Length != 32)
                 throw new InvalidOperationException("Gamma table must be 32 values in length");
             
             for (byte i = 0; i < 32; ++i) {
