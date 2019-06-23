@@ -102,6 +102,11 @@ namespace SenseHat
             instance = false;
         }
         
+        /// <summary>
+        /// Convert RGB565 to RGB888 byte[]
+        /// </summary>
+        /// <returns>Byte array of R, G, B (in RGB888)</returns>
+        /// <param name="raw">The "raw" RGB565 bits</param>
         public static byte[] rgb565_to_888(ushort raw) {
             byte rb = (byte)(raw & 31);
             byte rg = (byte)((raw >> 5) & 63);
@@ -113,6 +118,15 @@ namespace SenseHat
             px[2] = (byte)(rb * 255 / 31);
             
             return px;
+        }
+        
+        /// <summary>
+        /// Check if character is printable
+        /// </summary>
+        /// <returns><c>true</c> if char is printable, otherwise <c>false</c></returns>
+        /// <param name="c">The character</param>
+        public static bool charIsPrintable(char c) {
+            return ' ' <= c && c <= '~';
         }
         
         /// <summary>
@@ -435,6 +449,7 @@ namespace SenseHat
         /// <summary>
         /// Converts contents of front/back buffer into a bitmap
         /// </summary>
+        /// <returns>The resulting Bitmap object.</returns>
         /// <param name="redraw">If set to <c>true</c> use back buffer, otherwise use front buffer.</param>
         public Bitmap ToBitmap(bool buffer = true) {
             Bitmap bmp = new Bitmap(8, 8);
@@ -485,6 +500,11 @@ namespace SenseHat
         /// <param name="color">Letter color in RGB565</param>
         /// <param name="font">Font to draw letter with</param>
         public void ShowLetter(char ltr, ushort color = 0x7bef, ushort font = SenseLEDFont.defaultFont) {
+            if (!charIsPrintable(ltr)) { // If character is non-printable, clear screen and return
+                sense_bitmap_paint(fb2ptr, 0);
+                return;
+            }
+        
             ulong[] fontData = SenseLEDFont.getFontById(font); // Retrieve font data
             // Calculate index in array for letter (+2 is for skipping over dimensions)
             byte w = (byte)fontData[0], h = (byte)fontData[1], bitLen = (byte)(w * h);
@@ -539,10 +559,15 @@ namespace SenseHat
             byte w = (byte)fontData[0], h = (byte)fontData[1], bitLen = (byte)(w * h);
             byte[] columns = new byte[msg.Length * (w + 1) - 1 + 16]; // Calculate columns (chars, gaps, -1 for last gap, 2*8 blank cols)
             
-            int j = 8;
+            int j = 8, cols = columns.Length;
             // Fill columns array, leaving first and last 8 columns blank for effect
             for (int i = 0; i < msg.Length; ++i) {
                 char c = msg[i];
+                
+                if (!charIsPrintable(c)) { // Ignore non-printable chars
+                    cols -= w + 1; // Remove extra space
+                    continue;
+                }
                 
                 byte idx = (byte)(c - SenseLEDFont.startChar + 2);
                 ulong bits = fontData[idx];
@@ -565,7 +590,7 @@ namespace SenseHat
                 //     Draw columns, shifting the 8 col window right 1 col at a time
                 
                 ushort* buf = (ushort*)bufPtr;
-                for (int i = 0; i <= columns.Length - 8; ++i) {
+                for (int i = 0; i <= cols - 8; ++i) {
                     sense_bitmap_paint(fb2ptr, 0); // Clear back buffer
                     
                     for (j = 0; j < 8; ++j) {
