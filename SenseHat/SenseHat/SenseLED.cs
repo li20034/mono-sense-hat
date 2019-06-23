@@ -651,10 +651,10 @@ namespace SenseHat
         /// <param name="redraw">If set to <c>true</c> redraw, otherwise don't.</param>
         public void Clear(bool redraw = true)
         {
-            Fill(0);
+            sense_bitmap_paint(fb2ptr, 0);
 
             if (redraw)
-                Show ();
+                sense_bitmap_cpy(fbptr, fb2ptr);
         }
 
         /// <summary>
