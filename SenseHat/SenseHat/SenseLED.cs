@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
+using System.Threading;
 
 namespace SenseHat
 {
@@ -483,12 +484,13 @@ namespace SenseHat
         /// <param name="ltr">Character to draw on screen</param>
         /// <param name="color">Letter color in RGB565</param>
         /// <param name="font">Font to draw letter with</param>
-        public void ShowLetter(char ltr, ushort color, ulong[] font) {
+        public void ShowLetter(char ltr, ushort color = 0x7fff, ushort font = SenseLEDFont.defaultFont) {
+            ulong[] fontData = SenseLEDFont.getFontById(font); // Retrieve font data
             // Calculate index in array for letter (+2 is for skipping over dimensions)
-            byte w = (byte)font[0], h = (byte)font[1], bitLen = (byte)(w * h);
+            byte w = (byte)fontData[0], h = (byte)fontData[1], bitLen = (byte)(w * h);
             byte idx = (byte)(ltr - SenseLEDFont.startChar + 2);
             
-            ulong bits = font[idx];
+            ulong bits = fontData[idx];
             
             IntPtr bufPtr = sense_bitmap_get_buffer(fb2ptr); // Get internal data array of back buffer
             
@@ -510,7 +512,7 @@ namespace SenseHat
         /// <param name="ltr">Character to draw on screen</param>
         /// <param name="color">Letter color</param>
         /// <param name="font">Font to draw letter with</param>
-        public void ShowLetter(char ltr, Color color, ulong[] font) {
+        public void ShowLetter(char ltr, Color color, ushort font = SenseLEDFont.defaultFont) {
             ShowLetter(ltr, sense_make_color_rgb(color.R, color.G, color.B), font);
         }
         
@@ -520,46 +522,65 @@ namespace SenseHat
         /// <param name="ltr">Character to draw on screen</param>
         /// <param name="color">Letter color in RGB888 byte[]</param>
         /// <param name="font">Font to draw letter with</param>
-        public void ShowLetter(char ltr, byte[] color, ulong[] font) {
+        public void ShowLetter(char ltr, byte[] color, ushort font = SenseLEDFont.defaultFont) {
             ShowLetter(ltr, sense_make_color_rgb(color[0], color[1], color[2]), font);
         }
         
         /// <summary>
-        /// Draws a letter onto the back buffer with default font
-        /// </summary>
-        /// <param name="ltr">Character to draw on screen</param>
-        /// <param name="color">Letter color</param>
-        public void ShowLetter(char ltr, Color color) {
-            ShowLetter(ltr, sense_make_color_rgb(color.R, color.G, color.B), SenseLEDFont.defaultFont);
-        }
-        
-        /// <summary>
-        /// Draws a letter onto the back buffer with default font
-        /// </summary>
-        /// <param name="ltr">Character to draw on screen</param>
-        /// <param name="color">Letter color in RGB888 byte[]</param>
-        public void ShowLetter(char ltr, byte[] color) {
-            ShowLetter(ltr, sense_make_color_rgb(color[0], color[1], color[2]), SenseLEDFont.defaultFont);
-        }
-        
-        /// <summary>
-        /// Draws a letter onto the back buffer with default font and color
-        /// </summary>
-        /// <param name="ltr">Character to draw on screen</param>
-        public void ShowLetter(char ltr) {
-            ShowLetter(ltr, 0x7fff, SenseLEDFont.defaultFont);
-        }
-        
-        /// <summary>
         /// Shows a scrolling message on front buffer
         /// </summary>
         /// <param name="msg">Message to show</param> 
         /// <param name="color">RGB565 color to show message in</param>
-        /// <param name="scroll_speed">Rate to scroll message at</param>
-        public void ShowMessage(string msg, ushort color = 0x7fff, float scroll_speed = 0.1f) {
-            Console.WriteLine("FIXME: ShowMessage function stub called!");
+        /// <param name="scroll_delay">Delay between scroll update events (ms)</param>
+        public void ShowMessage(string msg, ushort color = 0x7fff, ushort font = SenseLEDFont.defaultFont, int scroll_delay = 100) {
+            IntPtr bufPtr = sense_bitmap_get_buffer(fb2ptr); // Get ptr to back buffer
             
-            //throw new NotImplementedException("FIXME: ShowMessage function stub called!");
+            ulong[] fontData = SenseLEDFont.getFontById(font);
+            byte w = (byte)fontData[0], h = (byte)fontData[1], bitLen = (byte)(w * h);
+            byte[] columns = new byte[msg.Length * (w + 1) - 1 + 8]; // Calculate columns
+            
+            int j = 0;
+            // Fill columns array
+            for (int i = 0; i < msg.Length; ++i) {
+                char c = msg[i];
+                
+                byte idx = (byte)(c - SenseLEDFont.startChar + 2);
+                ulong bits = fontData[idx];
+                
+                // Assemble columns
+                for (byte k = 0; k < w; ++k, ++j) {
+                    byte col = 0;
+                    for (byte l = 0; l < h; ++l) {
+                        byte bit = (byte)((bits >> (bitLen - 1 - l * w - k)) & 1);
+                        col |= (byte)(bit << (7 - l));
+                    }
+                    
+                    columns[j] = col;
+                }
+                ++j; // Leave gap between letters
+            }
+            
+            unsafe {
+                // Draw array, screenful at a time, and animate
+                //     Draw columns, shifting the window right 1px at a time
+                
+                ushort* buf = (ushort*)bufPtr;
+                for (int i = 0; i <= columns.Length - 8; ++i) {
+                    sense_bitmap_paint(fb2ptr, 0); // Clear back buffer
+                    
+                    for (j = 0; j < 8; ++j) {
+                        byte col = columns[i + j];
+                        
+                        for (int k = 0; k < h; ++k) {
+                            byte bit = (byte)((col >> (7 - k)) & 1);
+                            buf[(k << 3) | j] = (bit == 1) ? color : (ushort)0;
+                        }
+                    }
+                    
+                    Show(); // Update to front buffer
+                    Thread.Sleep(scroll_delay);
+                }
+            }
         }
         
         /// <summary>
@@ -567,9 +588,9 @@ namespace SenseHat
         /// </summary>
         /// <param name="msg">Message to show</param> 
         /// <param name="color">RGB565 color to show message in</param>
-        /// <param name="scroll_speed">Rate to scroll message at</param>
-        public void ShowMessage(string msg, Color color, float scroll_speed = 0.1f) {
-            ShowMessage(msg, sense_make_color_rgb(color.R, color.G, color.B), scroll_speed);
+        /// <param name="scroll_delay">Delay between scroll update events (ms)</param>
+        public void ShowMessage(string msg, Color color, ushort fontId = SenseLEDFont.defaultFont, int scroll_delay = 100) {
+            ShowMessage(msg, sense_make_color_rgb(color.R, color.G, color.B), fontId, scroll_delay);
         }
         
         /// <summary>
@@ -577,9 +598,9 @@ namespace SenseHat
         /// </summary>
         /// <param name="msg">Message to show</param> 
         /// <param name="color">RGB565 color to show message in</param>
-        /// <param name="scroll_speed">Rate to scroll message at</param>
-        public void ShowMessage(string msg, byte[] color, float scroll_speed = 0.1f) {
-            ShowMessage(msg, sense_make_color_rgb(color[0], color[1], color[2]), scroll_speed);
+        /// <param name="scroll_delay">Delay between scroll update events (ms)</param>
+        public void ShowMessage(string msg, byte[] color, ushort fontId = SenseLEDFont.defaultFont, int scroll_delay = 100) {
+            ShowMessage(msg, sense_make_color_rgb(color[0], color[1], color[2]), fontId, scroll_delay);
         }
         
         /// <summary>
