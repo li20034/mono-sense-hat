@@ -499,7 +499,7 @@ namespace SenseHat
                 
                 for (byte y = 0; y < h; ++y) {
                     for (byte x = 0; x < w; ++x) {
-                        byte bit = (byte)((bits >> (bitLen - y * h - x - 1)) & 1);
+                        byte bit = (byte)((bits >> (bitLen - y * w - x - 1)) & 1);
                         buf[(y << 3) | x] = (bit == 1) ? color : (ushort)0;
                     }
                 }
@@ -537,10 +537,10 @@ namespace SenseHat
             
             ulong[] fontData = SenseLEDFont.getFontById(font);
             byte w = (byte)fontData[0], h = (byte)fontData[1], bitLen = (byte)(w * h);
-            byte[] columns = new byte[msg.Length * (w + 1) - 1 + 8]; // Calculate columns
+            byte[] columns = new byte[msg.Length * (w + 1) - 1 + 16]; // Calculate columns (chars, gaps, -1 for last gap, 2*8 blank cols)
             
-            int j = 0;
-            // Fill columns array
+            int j = 8;
+            // Fill columns array, leaving first and last 8 columns blank for effect
             for (int i = 0; i < msg.Length; ++i) {
                 char c = msg[i];
                 
@@ -562,7 +562,7 @@ namespace SenseHat
             
             unsafe {
                 // Draw array, screenful at a time, and animate
-                //     Draw columns, shifting the window right 1px at a time
+                //     Draw columns, shifting the 8 col window right 1 col at a time
                 
                 ushort* buf = (ushort*)bufPtr;
                 for (int i = 0; i <= columns.Length - 8; ++i) {
@@ -578,7 +578,7 @@ namespace SenseHat
                     }
                     
                     Show(); // Update to front buffer
-                    Thread.Sleep(scroll_delay);
+                    Thread.Sleep(scroll_delay); // Wait for next frame
                 }
             }
         }
