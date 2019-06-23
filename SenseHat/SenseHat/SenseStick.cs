@@ -93,6 +93,8 @@ namespace SenseHat
         /// <summary>
         /// Initializes SenseStick internals
         /// </summary>
+        /// <param name="exclusive">Seize all control of joystick</param>
+        /// <param name="manualPoll">Don't automatically retrieve events</param>
         public void Init(bool exclusive = true, bool manualPoll = false) {
             if (instance) // Block new class creation if instance already exists
                 throw new InvalidOperationException ("Multiple instances of SenseStick not permitted");
