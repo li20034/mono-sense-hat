@@ -150,19 +150,29 @@ namespace SenseHat
         }
         
         /// <summary>
+        /// Convert RGB565 to RGB565 byte[]
+        /// </summary>
+        /// <returns>Byte array of R, G, B (in RGB565)</returns>
+        /// <param name="raw">The "raw" RGB565 bits</param>
+        public static byte[] rgb565_to_565(ushort raw) {
+            byte[] px = new byte[3];
+            px[2] = (byte)(raw & 31);
+            px[1] = (byte)((raw >> 5) & 63);
+            px[0] = (byte)(raw >> 11);
+            
+            return px;
+        }
+        
+        /// <summary>
         /// Convert RGB565 to RGB888 byte[]
         /// </summary>
         /// <returns>Byte array of R, G, B (in RGB888)</returns>
         /// <param name="raw">The "raw" RGB565 bits</param>
         public static byte[] rgb565_to_888(ushort raw) {
-            byte rb = (byte)(raw & 31);
-            byte rg = (byte)((raw >> 5) & 63);
-            byte rr = (byte)((raw >> 11) & 31);
-            
-            byte[] px = new byte[3];
-            px[0] = (byte)(rr * 255 / 31);
-            px[1] = (byte)(rg * 255 / 63);
-            px[2] = (byte)(rb * 255 / 31);
+            byte[] px = rgb565_to_565(raw); 
+            px[0] = (byte)(px[0] * 255 / 31);
+            px[1] = (byte)(px[1] * 255 / 63);
+            px[2] = (byte)(px[2] * 255 / 31);
             
             return px;
         }
@@ -254,7 +264,6 @@ namespace SenseHat
                 bufPtr = sense_bitmap_get_buffer(fb2ptr);
 
             // Allocate appropriate varibles
-            byte[] px = new byte[3];
             ushort dt;
 
             unsafe
@@ -282,7 +291,6 @@ namespace SenseHat
                 bufPtr = sense_bitmap_get_buffer(fb2ptr);
 
             // Allocate appropriate variables
-            byte[] px = new byte[3];
             ushort dt;
 
             unsafe
@@ -291,11 +299,7 @@ namespace SenseHat
             }
 
             // Extract R, G, B
-            px[0] = (byte)(dt >> 11);
-            px[1] = (byte)((dt >> 5) & 63);
-            px[2] = (byte)(dt & 31);
-
-            return px;
+            return rgb565_to_565(dt);
         }
 
         /// <summary>
