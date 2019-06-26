@@ -105,7 +105,7 @@ namespace SenseHat
             string dev_name = probe_sense_stick();
 
             if (!string.IsNullOrEmpty(dev_name)) // If device name is valid, open Joystick device
-                stick_dev = open_sense_stick(dev_name, (sbyte)((exclusive) ? 1 : 0));
+                stick_dev = open_sense_stick(dev_name, (sbyte)(exclusive ? 1 : 0));
             else
                 throw new InvalidOperationException("Cannot open sense stick");
 

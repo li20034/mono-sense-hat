@@ -257,11 +257,7 @@ namespace SenseHat
         public byte[] GetPixel(int x, int y, bool buffer = true)
         {
             // Get pointer to desired buffer
-            IntPtr bufPtr;
-            if (!buffer)
-                bufPtr = sense_bitmap_get_buffer(fbptr);
-            else
-                bufPtr = sense_bitmap_get_buffer(fb2ptr);
+            IntPtr bufPtr = sense_bitmap_get_buffer(buffer ? fb2ptr : fbptr);
 
             // Allocate appropriate varibles
             ushort dt;
@@ -284,11 +280,7 @@ namespace SenseHat
         public byte[] GetPixelRaw(int x, int y, bool buffer = true)
         {
             // Get pointer to desired buffer
-            IntPtr bufPtr;
-            if (!buffer)
-                bufPtr = sense_bitmap_get_buffer(fbptr);
-            else
-                bufPtr = sense_bitmap_get_buffer(fb2ptr);
+            IntPtr bufPtr = sense_bitmap_get_buffer(buffer ? fb2ptr : fbptr);
 
             // Allocate appropriate variables
             ushort dt;
@@ -310,11 +302,7 @@ namespace SenseHat
         public ushort[] GetPixelsRaw(bool buffer = true)
         {
             // Get pointer to desired buffer
-            IntPtr bufPtr;
-            if (!buffer)
-                bufPtr = sense_bitmap_get_buffer(fbptr);
-            else
-                bufPtr = sense_bitmap_get_buffer(fb2ptr);
+            IntPtr bufPtr = sense_bitmap_get_buffer(buffer ? fb2ptr : fbptr);
 
             // Allocate appropriate variables
             ushort[] pxs = new ushort[64];
@@ -501,13 +489,13 @@ namespace SenseHat
         /// Converts contents of front/back buffer into a bitmap
         /// </summary>
         /// <returns>The resulting Bitmap object.</returns>
-        /// <param name="redraw">If set to <c>true</c> use back buffer, otherwise use front buffer.</param>
+        /// <param name="buffer">If set to <c>true</c> use back buffer, otherwise use front buffer.</param>
         public Bitmap ToBitmap(bool buffer = true) {
             Bitmap bmp = new Bitmap(8, 8);
             
             Rectangle rect = new Rectangle(0, 0, 8, 8);
             BitmapData dt = bmp.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb); // Get internal data array of bitmap obj
-            IntPtr bufPtr = sense_bitmap_get_buffer((buffer) ? fb2ptr : fbptr); // Select front/back buffer
+            IntPtr bufPtr = sense_bitmap_get_buffer(buffer ? fb2ptr : fbptr); // Select front/back buffer
 
             unsafe {
                 uint* arr = (uint*)dt.Scan0; // Cast to array of 32 bit ARGB
@@ -530,7 +518,7 @@ namespace SenseHat
         /// Saves front/back buffer to a PNG file
         /// </summary>
         /// <param name="path">Path to save the image to</param>
-        /// <param name="redraw">If set to <c>true</c> use back buffer, otherwise use front buffer.</param>
+        /// <param name="buffer">If set to <c>true</c> use back buffer, otherwise use front buffer.</param>
         public void SaveBitmap(string path, bool buffer = true) {
             ToBitmap(buffer).Save(path, ImageFormat.Png);
         }
@@ -600,7 +588,7 @@ namespace SenseHat
         /// <summary>
         /// Shows a scrolling message on front buffer
         /// </summary>
-        /// <param name="msg">Message to show</param> 
+        /// <param name="msg">Message to show</param>
         /// <param name="color">RGB565 color to show message in</param>
         /// <param name="scroll_delay">Delay between scroll update events (ms)</param>
         public void ShowMessage(string msg, ushort color = 0x7bef, ushort font = SenseLEDFont.defaultFont, int scroll_delay = 100) {
@@ -794,7 +782,7 @@ namespace SenseHat
         /// </summary>
         /// <param name="val">If <c>true</c> enable low light mode, else disable it</param>
         public void SetLowLight(bool val) {
-            sense_fb_set_lowlight(fbptr, (sbyte)((val) ? 1 : 0));
+            sense_fb_set_lowlight(fbptr, (sbyte)(val ? 1 : 0));
         }
     }
 }

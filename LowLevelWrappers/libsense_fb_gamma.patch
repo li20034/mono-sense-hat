@@ -78,7 +78,7 @@
 +    if (!fb->isfb)
 +        return;
 +
-+    ioctl(fb->fd, SENSE_FBIORESET_GAMMA, (val) ? SENSE_FB_GAMMA_LOW : SENSE_FB_GAMMA_DEFAULT);
++    ioctl(fb->fd, SENSE_FBIORESET_GAMMA, val ? SENSE_FB_GAMMA_LOW : SENSE_FB_GAMMA_DEFAULT);
 +}
 +
 +char sense_fb_get_lowlight(sense_bitmap_t fb) {
