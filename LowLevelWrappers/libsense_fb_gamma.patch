@@ -1,5 +1,5 @@
---- fb.c	2019-06-23 13:34:15.928972858 -0400
-+++ fb.new.c	2019-06-23 13:30:26.252976971 -0400
+--- fb.c	2019-06-26 14:42:58.771716314 -0400
++++ fb.new.c	2019-06-26 14:43:38.411394109 -0400
 @@ -10,6 +10,14 @@
  #include <sys/mman.h>
  #include <unistd.h>
@@ -15,7 +15,7 @@
  
  static int _sense_err = 0;
  
-@@ -30,7 +38,9 @@
+@@ -30,11 +38,14 @@
  
  struct sense_bitmap {
      uint16_t* bmp;
@@ -26,7 +26,12 @@
  };
  
  void _sense_bitmap_fb_free(sense_bitmap_t bmp){
-@@ -70,6 +80,8 @@
+     munmap(bmp->bmp,SENSE_BUFFER_SIZE);
++    close(bmp->fd);
+ }
+ void _sense_bitmap_mem_free(sense_bitmap_t bmp){
+     free(bmp->bmp);
+@@ -70,12 +81,15 @@
                      ret = (sense_bitmap_t)malloc(sizeof(struct sense_bitmap));
                      ret->bmp = (uint16_t*)mmap(NULL,SENSE_BUFFER_SIZE ,PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
                      ret->dtor = _sense_bitmap_fb_free;
@@ -35,7 +40,14 @@
                      if (!ret->bmp){
                          sense_free_bitmap(ret);
                          ret = NULL;
-@@ -89,6 +101,7 @@
+                         _sense_err = EACCES;
+                     } else {
+                         _sense_err = 0;
++                        return ret;
+                     }
+                 }
+             }
+@@ -89,6 +103,7 @@
      sense_bitmap_t ret = (sense_bitmap_t)malloc(sizeof(struct sense_bitmap));
      ret->bmp = (uint16_t*)malloc(SENSE_BUFFER_SIZE);
      ret->dtor = _sense_bitmap_mem_free;
@@ -43,7 +55,7 @@
      return ret;
  }
  
-@@ -136,3 +149,50 @@
+@@ -136,3 +151,50 @@
      for (i=0;i<SENSE_PIXELS;++i) buffer[i] = color;
      memcpy(bmp->bmp,buffer,SENSE_BUFFER_SIZE);
  }
