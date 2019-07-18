@@ -125,18 +125,17 @@ void close_sense_stick(struct stickDev* dev) {
 }
 
 // Retrieves most recent event from device file
-struct stickEvent* get_sense_evt(struct stickDev* obj) {
+char get_sense_evt(struct stickDev* obj, struct stickEvent* e) {
+    if (!e)
+        return -1;
+
     struct input_event evt;
     evt.type = EV_SYN;
     
     while (evt.type != EV_KEY) { // Ignore events which are not EV_KEY since stick masquerades as kbd
         if (read(obj->fd, &evt, sizeof(struct input_event)) == -1) // Read event into default struct, blocks until event occurs
-            return NULL; // abort on failed read
+            return -1;
     }
-        
-    struct stickEvent* e = malloc(sizeof(struct stickEvent)); // Allocate custom event struct
-    if (!e) // malloc (size_t size) failed
-        return NULL;
     
     // Load data into custom event struct
     e->timestamp = evt.time.tv_sec + evt.time.tv_usec / 1000000.0; // Convert timeval struct to double timestamp (in seconds)
@@ -159,6 +158,6 @@ struct stickEvent* get_sense_evt(struct stickDev* obj) {
     }
     
     e->action = evt.value;
-    return e;
+    return 0;
 }
 

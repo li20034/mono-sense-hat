@@ -32,10 +32,6 @@ namespace SenseHat
     /// </summary>
     public class SenseStick
     {
-        // Libc instance of free
-        [DllImport("libc.so.6")]
-        private static extern void free(IntPtr ptr);
-
         // Open the linux device file for the joystick from the given dev name
         [DllImport("stick.so")]
         private static extern IntPtr open_sense_stick(string dev, sbyte exclusive);
@@ -50,7 +46,7 @@ namespace SenseHat
 
         // Get the first unhandled event from joystick
         [DllImport("stick.so")]
-        private static extern IntPtr get_sense_evt(IntPtr obj);
+        private static extern sbyte get_sense_evt(IntPtr obj, ref stickEvent e);
 
         /// <summary>
         /// Stick event structure imported from C drivers.
@@ -191,20 +187,16 @@ namespace SenseHat
         /// </summary>
         private void worker()
         {
-            unsafe
+            while (true)
             {
-                while (true)
-                {
-                    IntPtr evtPtr = get_sense_evt(stick_dev); // Blocks until event
-                    if (evtPtr == IntPtr.Zero)
-                        throw new InvalidOperationException ("Cannot retrieve event");
+                stickEvent evt = new stickEvent ();
+                sbyte ret = get_sense_evt(stick_dev, ref evt); // Blocks until event
+                if (ret == -1)
+                    throw new InvalidOperationException ("Cannot retrieve event");
 
-                    stickEvent evt = *(stickEvent*)evtPtr; // Interperets C struct as C# struct
-                    SenseStickEventArgs e = makeSenseStickEventArgs(evt); // Create event arguments
-                    free(evtPtr); // Free C event pointer
+                SenseStickEventArgs e = makeSenseStickEventArgs(evt); // Create event arguments
 
-                    OnInputEvent(e); // Raise input event
-                }
+                OnInputEvent(e); // Raise input event
             }
         }
 
@@ -217,18 +209,14 @@ namespace SenseHat
             if (!manual) // Block if in auto mode
                 throw new InvalidOperationException("Cannot call GetEvent in non-manual polling mode");
 
-            unsafe
-            {
-                IntPtr evtPtr = get_sense_evt(stick_dev); // Blocks until event
-                if (evtPtr == IntPtr.Zero)
-                    throw new InvalidOperationException ("Cannot retrieve event");
-                
-                stickEvent evt = *(stickEvent*)evtPtr; // Interperets C struct as C# struct
-                SenseStickEventArgs e = makeSenseStickEventArgs(evt); // Create event arguments
-                free(evtPtr); // Free C event pointer
+            stickEvent evt = new stickEvent ();
+            sbyte ret = get_sense_evt(stick_dev, ref evt); // Blocks until event
+            if (ret == -1)
+                throw new InvalidOperationException ("Cannot retrieve event");
+            
+            SenseStickEventArgs e = makeSenseStickEventArgs(evt); // Create event arguments
 
-                return e; // Return input event
-            }
+            return e; // Return input event
         }
     }
 }

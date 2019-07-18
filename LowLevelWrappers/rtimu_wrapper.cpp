@@ -65,125 +65,105 @@ extern "C" void set_imu_config (IMUState* imuPtr, bool compass_enabled, bool gyr
 
 // Attempt to read all IMU sensors
 bool readIMU (IMUState* imuPtr) {
+    int delay = imuPtr->IMU_POLL_INTERVAL * 1000; // precalculate delay in uS
     for (int att = 0; att < 3; ++att) { // Retry 3 times when reading IMU
         if (imuPtr->imu->IMURead())
             return true;
         
-        usleep(imuPtr->IMU_POLL_INTERVAL * 1000); // Wait for poll interval before retry
+        usleep(delay); // Wait for poll interval before retry
     }
 
     return false;
 }
 
 // Acquire raw data from IMU sensors
-extern "C" double* get_raw_data (IMUState* imuPtr, unsigned char selection) { // TODO: optimize this by putting all data into a struct like the py version does   
-    // Only proceed if data was successfully read
-    if (readIMU(imuPtr)) {
-        double *result = (double*)malloc(4 * sizeof(double)); // Allocate max needed space
+// TODO: optimize this by putting all data into a struct like the py version does
+extern "C" char get_raw_data (IMUState* imuPtr, unsigned char selection, double* result) {
+    // Only proceed if data was successfully read and target buffer is valid
+    if (!result || !readIMU(imuPtr))
+        return -1;
     
-        if (!result) // malloc(size_t size) failed
-            return NULL;
-        
-        const RTIMU_DATA& data = imuPtr->imu->getIMUData();
-        char fail = 0; // Flags failure to prevent memory leak
-        
-        // Switch returned data based on user selection
-        switch (selection) {
-            case RAW_ACCEL:
-                if (data.accelValid) {
-                    result[0] = data.accel.x();
-                    result[1] = data.accel.y();
-                    result[2] = data.accel.z();
-                }
-                else
-                    fail = 1;
-                break;
-            case RAW_GYRO:
-                if (data.gyroValid) {
-                    result[0] = data.gyro.x();
-                    result[1] = data.gyro.y();
-                    result[2] = data.gyro.z();
-                }
-                else
-                    fail = 1;
-                break;
-            case RAW_COMPASS:
-                if (data.compassValid) {
-                    result[0] = data.compass.x();
-                    result[1] = data.compass.y();
-                    result[2] = data.compass.z();
-                }
-                else
-                    fail = 1;
-                break;
-            case RAW_FUSION_POSE:
-                if (data.fusionPoseValid) {
-                    result[0] = data.fusionPose.x();
-                    result[1] = data.fusionPose.y();
-                    result[2] = data.fusionPose.z();
-                }
-                else
-                    fail = 1;
-                break;
-            case RAW_FUSIONQ_POSE:
-                if (data.fusionQPoseValid) {
-                    result[0] = data.fusionQPose.scalar();
-                    result[1] = data.fusionQPose.x();
-                    result[2] = data.fusionQPose.y();
-                    result[3] = data.fusionQPose.z();
-                }
-                else
-                    fail = 1;
-                break;
-            case RAW_TIMESTAMP:
-                result[0] = data.timestamp;
-                break;
-        }
-        
-        if (fail) { // Check failure flag and free the ptr before returning NULL
-            free(result);
-            return NULL;
-        }
-        
-        return result;
+    const RTIMU_DATA& data = imuPtr->imu->getIMUData();
+    
+    // Switch returned data based on user selection
+    switch (selection) {
+        case RAW_ACCEL:
+            if (data.accelValid) {
+                result[0] = data.accel.x();
+                result[1] = data.accel.y();
+                result[2] = data.accel.z();
+            }
+            else
+                return -1;
+            break;
+        case RAW_GYRO:
+            if (data.gyroValid) {
+                result[0] = data.gyro.x();
+                result[1] = data.gyro.y();
+                result[2] = data.gyro.z();
+            }
+            else
+                return -1;
+            break;
+        case RAW_COMPASS:
+            if (data.compassValid) {
+                result[0] = data.compass.x();
+                result[1] = data.compass.y();
+                result[2] = data.compass.z();
+            }
+            else
+                return -1;
+            break;
+        case RAW_FUSION_POSE:
+            if (data.fusionPoseValid) {
+                result[0] = data.fusionPose.x();
+                result[1] = data.fusionPose.y();
+                result[2] = data.fusionPose.z();
+            }
+            else
+                return -1;
+            break;
+        case RAW_FUSIONQ_POSE:
+            if (data.fusionQPoseValid) {
+                result[0] = data.fusionQPose.scalar();
+                result[1] = data.fusionQPose.x();
+                result[2] = data.fusionQPose.y();
+                result[3] = data.fusionQPose.z();
+            }
+            else
+                return -1;
+            break;
+        case RAW_TIMESTAMP:
+            result[0] = data.timestamp;
+            break;
     }
-    else
-        return NULL;
+    
+    return 0;
 }
 
 // Acquire raw humidity data
-extern "C" double* get_raw_humidity (IMUState* imuPtr) {
+extern "C" char get_raw_humidity (IMUState* imuPtr, double* result) {
     RTIMU_DATA data;
     imuPtr->humidity->humidityRead(data);
-    
-    if (!data.humidityValid || !data.temperatureValid)
-        return NULL;
-        
-    double *result = (double*)malloc(2 * sizeof(double));
-    if (!result) // malloc failed
-        return NULL;
+    if (!data.humidityValid || !data.temperatureValid || !result)
+        return -1;
     
     result[0] = data.humidity;
     result[1] = data.temperature;
     
-    return result;
+    return 0;
 }
 
 
 // Acquire raw pressure data
-extern "C" double* get_raw_pres (IMUState* imuPtr) {
+extern "C" char get_raw_pres (IMUState* imuPtr, double* result) {
     RTIMU_DATA data;
     imuPtr->pressure->pressureRead(data);
-    
-    if (!data.pressureValid || !data.temperatureValid)
-        return NULL;
-        
-    double *result = (double*)malloc(2 * sizeof(double));
-    if (!result) // malloc failed
-        return NULL;
+    if (!data.pressureValid || !data.temperatureValid || !result)
+        return -1;
     
     result[0] = data.pressure;
     result[1] = data.temperature;
     
-    return result;
+    return 0;
 }

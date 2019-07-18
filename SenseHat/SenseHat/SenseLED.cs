@@ -48,27 +48,27 @@ namespace SenseHat
         [DllImport("libsense.so")]
         private static extern void sense_bitmap_cpy(IntPtr dst, IntPtr src);
         
-        // Libc instance of free
+        // Libc instance of memcpy
         [DllImport("libc.so.6")]
-        private static extern void free(IntPtr ptr);
+        private static extern IntPtr memcpy(IntPtr dst, IntPtr src, uint n);
         
         // Gamma functions. Requires patched libsense (libsense_fb_gamma.patch)
         
         // Set sense hat gamma (sbyte[] needs 32 values, value range is 0 - 31)
         [DllImport("libsense.so")]
-        private static extern void sense_fb_set_gamma(IntPtr fb, sbyte[] gamma);
+        private static extern sbyte sense_fb_set_gamma(IntPtr fb, sbyte[] gamma);
         
         // Get gamma settings from kernel driver
         [DllImport("libsense.so")]
-        private static extern IntPtr sense_fb_get_gamma(IntPtr fb);
+        private static extern sbyte sense_fb_get_gamma(IntPtr fb, [Out] sbyte[] gamma);
         
         // Reset gamma settings to default
         [DllImport("libsense.so")]
-        private static extern void sense_fb_reset_gamma(IntPtr fb);
+        private static extern sbyte sense_fb_reset_gamma(IntPtr fb);
         
         // Apply low light mode gamma settings
         [DllImport("libsense.so")]
-        private static extern void sense_fb_set_lowlight(IntPtr fb, sbyte val);
+        private static extern sbyte sense_fb_set_lowlight(IntPtr fb, sbyte val);
         
         // Check if low light mode is enabled
         [DllImport("libsense.so")]
@@ -307,12 +307,9 @@ namespace SenseHat
             // Allocate appropriate variables
             ushort[] pxs = new ushort[64];
 
-            unsafe
-            {
-                // Get the RGB 565 pixel data for each pixel
-                ushort* buf = (ushort*)bufPtr;
-                for (ushort i = 0; i < 64; ++i)
-                    pxs[i] = buf[i];
+            unsafe {
+                fixed (ushort* pxPtr = pxs)
+                    memcpy ((IntPtr)pxPtr, bufPtr, 128); // raw memory copy, 128 = 64 * 2 (ushort = 2 bytes)
             }
 
             return pxs;
@@ -324,14 +321,16 @@ namespace SenseHat
         /// <param name="pxs">Pixel array of length 64</param>
         public void SetPixelsRaw(ushort[] pxs)
         {
+            if (pxs.Length != 64)
+                throw new InvalidOperationException("Pixel array must have length of 64");
+
             // Get pointer to back buffer
             IntPtr bufPtr = sense_bitmap_get_buffer(fb2ptr);
 
             unsafe
             {
-                ushort* buf = (ushort*)bufPtr;
-                for (ushort i = 0; i < 64; ++i) // Set all pixels
-                    buf[i] = pxs[i];
+                fixed (ushort* pxPtr = pxs)
+                    memcpy (bufPtr, (IntPtr)pxPtr, 128); // raw memory copy, 128 = 64 * 2 (ushort = 2 bytes)
             }
         }
 
@@ -725,20 +724,10 @@ namespace SenseHat
         /// </summary>
         /// <returns>Signed byte array representing the gamma LUT (32 values ranging from 0 - 31)</returns>
         public sbyte[] GetGamma() {
-            IntPtr gammaPtr = sense_fb_get_gamma(fbptr);
-            if (gammaPtr == IntPtr.Zero)
-                throw new InvalidOperationException("Failed to get gamma table from SenseHat framebuffer");
-            
             sbyte[] gamma = new sbyte[32];
+            if (sense_fb_get_gamma(fbptr, gamma) == -1)
+                throw new InvalidOperationException("Failed to get gamma table values");
             
-            // Copy C return values into C# array
-            unsafe {
-                sbyte* arr = (sbyte*)gammaPtr;
-                for (byte i = 0; i < 32; ++i)
-                    gamma[i] = arr[i];
-            }
-            
-            free(gammaPtr);
             return gamma;
         }
         
@@ -755,14 +744,16 @@ namespace SenseHat
                     throw new InvalidOperationException("Gamma table values out of range (valid range is 0 - 31)");
             }
             
-            sense_fb_set_gamma(fbptr, gamma);
+            if (sense_fb_set_gamma (fbptr, gamma) == -1)
+                throw new InvalidOperationException ("Failed to set gamma table");
         }
         
         /// <summary>
         /// Resets gamma look up table values to default
         /// </summary>
         public void ResetGamma() {
-            sense_fb_reset_gamma(fbptr);
+            if (sense_fb_reset_gamma (fbptr) == -1)
+                throw new InvalidOperationException ("Failed to reset gamma table");
         }
         
         /// <summary>
@@ -782,7 +773,8 @@ namespace SenseHat
         /// </summary>
         /// <param name="val">If <c>true</c> enable low light mode, else disable it</param>
         public void SetLowLight(bool val) {
-            sense_fb_set_lowlight(fbptr, (sbyte)(val ? 1 : 0));
+            if (sense_fb_set_lowlight (fbptr, (sbyte)(val ? 1 : 0)) == -1)
+                throw new InvalidOperationException ("Failed to change low light setting");
         }
     }
 }

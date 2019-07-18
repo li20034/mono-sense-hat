@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace SenseHat
 {
+    // TODO: implement get fusion q pose
     /// <summary>
     /// Environemental and Position Measurement Object for Raspberry Pi SenseHat
     /// </summary>
@@ -20,19 +21,16 @@ namespace SenseHat
         private static extern void freeIMU(IntPtr imuPtr); // Free IMU
 
         [DllImport("rtimu_wrapper.so")]
-        private static extern IntPtr get_raw_data(IntPtr imuPtr, int selection); // Get raw data from IMU
+        private static extern sbyte get_raw_data(IntPtr imuPtr, int selection, [Out] double[] result); // Get raw data from IMU
 
         [DllImport("rtimu_wrapper.so")]
-        private static extern IntPtr get_raw_humidity(IntPtr imuPtr); // Get raw data from humidity sensor
+        private static extern sbyte get_raw_humidity(IntPtr imuPtr, [Out] double[] result); // Get raw data from humidity sensor
 
         [DllImport("rtimu_wrapper.so")]
-        private static extern IntPtr get_raw_pres(IntPtr imuPtr); // Get raw data from pressure sensor
+        private static extern sbyte get_raw_pres(IntPtr imuPtr, [Out] double[] result); // Get raw data from pressure sensor
 
         [DllImport("rtimu_wrapper.so")]
         private static extern void set_imu_config(IntPtr imuPtr, bool compass_enabled, bool gyro_enabled, bool accel_enabled); // Enable/disable specific IMU sensors
-
-        [DllImport("libc.so.6")]
-        private static extern void free(IntPtr ptr); // free() from C library
 
         [DllImport("libc.so.6")]
         private static extern uint getuid(); // GNU/Linux getuid() syscall
@@ -128,15 +126,11 @@ namespace SenseHat
         /// <returns>The temperature in degrees Celcius.</returns>
         public double GetTemperature()
         {
-            IntPtr dptr = get_raw_humidity(imuPtr);
-            if (dptr == IntPtr.Zero)
-                throw new InvalidOperationException("Temperature reading is not valid");
-
-            // Copy data struct from c++ to c#
             double[] data = new double[2];
-            Marshal.Copy(dptr, data, 0, 2); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
-            free(dptr);
-
+            sbyte ret = get_raw_humidity(imuPtr, data);
+            if (ret == -1)
+                throw new InvalidOperationException("Temperature reading is not valid");
+            
             return data[1]; // Extract temp
         }
 
@@ -146,14 +140,10 @@ namespace SenseHat
         /// <returns>The temperature pressure.</returns>
         public double GetTemperature_Pressure()
         {
-            IntPtr dptr = get_raw_pres(imuPtr);
-            if (dptr == IntPtr.Zero)
-                throw new InvalidOperationException("Temperature reading is not valid");
-
-            // Copy data struct from c++ to c#
             double[] data = new double[2];
-            Marshal.Copy(dptr, data, 0, 2); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
-            free(dptr);
+            sbyte ret = get_raw_pres(imuPtr, data);
+            if (ret == -1)
+                throw new InvalidOperationException("Temperature reading is not valid");
 
             return data[1]; // Extract temp
         }
@@ -164,14 +154,10 @@ namespace SenseHat
         /// <returns>The humidity.</returns>
         public double GetHumidity()
         {
-            IntPtr dptr = get_raw_humidity(imuPtr);
-            if (dptr == IntPtr.Zero)
-                throw new InvalidOperationException("Humidity reading is not valid");
-
-            // Copy data struct from c++ to c#
             double[] data = new double[2];
-            Marshal.Copy(dptr, data, 0, 2); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
-            free(dptr);
+            sbyte ret = get_raw_humidity(imuPtr, data);
+            if (ret == -1)
+                throw new InvalidOperationException("Humidity reading is not valid");
 
             return data[0]; // Extract humidity
         }
@@ -182,14 +168,10 @@ namespace SenseHat
         /// <returns>The pressure.</returns>
         public double GetPressure()
         {
-            IntPtr dptr = get_raw_pres(imuPtr);
-            if (dptr == IntPtr.Zero)
-                throw new InvalidOperationException("Pressure reading is not valid");
-
-            // Copy data struct from c++ to c#
             double[] data = new double[2];
-            Marshal.Copy(dptr, data, 0, 2); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
-            free(dptr);
+            sbyte ret = get_raw_pres(imuPtr, data);
+            if (ret == -1)
+                throw new InvalidOperationException("Pressure reading is not valid");
 
             return data[0]; // Extract pressure
         }
@@ -229,14 +211,10 @@ namespace SenseHat
         /// <returns>double[] containing pitch, roll, yaw</returns>
         public double[] GetOrientation_Radians()
         {
-            IntPtr dptr = get_raw_data(imuPtr, RTIMU_Enums.RAW_FUSION_POSE);
-            if (dptr == IntPtr.Zero)
-                return null;
-
-            // Copy data struct from c++ to c#
             double[] data = new double[3];
-            Marshal.Copy(dptr, data, 0, 3); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
-            free(dptr);
+            sbyte ret = get_raw_data(imuPtr, RTIMU_Enums.RAW_FUSION_POSE, data);
+            if (ret == -1)
+                return null;
 
             return data;
         }
@@ -293,14 +271,10 @@ namespace SenseHat
         {
             Set_IMU_Config(false, false, true);
 
-            IntPtr dptr = get_raw_data(imuPtr, RTIMU_Enums.RAW_ACCEL);
-            if (dptr == IntPtr.Zero)
-                return null;
-
-            // Copy data struct from c++ to c#
             double[] data = new double[3];
-            Marshal.Copy(dptr, data, 0, 3); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
-            free(dptr);
+            sbyte ret = get_raw_data(imuPtr, RTIMU_Enums.RAW_ACCEL, data);
+            if (ret == -1)
+                return null;
 
             return data;
         }
@@ -351,14 +325,10 @@ namespace SenseHat
         /// <returns>The timestamp (double respresenting seconds).</returns>
         public double GetTimestamp()
         {
-            IntPtr dptr = get_raw_data(imuPtr, RTIMU_Enums.RAW_TIMESTAMP);
-            if (dptr == IntPtr.Zero)
-                throw new InvalidOperationException("Timestamp is not valid");
-
-            // Copy data struct from c++ to c#
             double[] timestamp = new double[1];
-            Marshal.Copy(dptr, timestamp, 0, 1); // Somewhat equivalent to: void * memcpy(void * destination, const void * source, size_t num)
-            free(dptr);
+            sbyte ret = get_raw_data(imuPtr, RTIMU_Enums.RAW_TIMESTAMP, timestamp);
+            if (ret == -1)
+                throw new InvalidOperationException("Timestamp is not valid");
 
             return timestamp[0];
         }

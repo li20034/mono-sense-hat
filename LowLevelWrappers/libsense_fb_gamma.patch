@@ -1,5 +1,5 @@
---- fb.c	2019-06-26 14:42:58.771716314 -0400
-+++ fb.new.c	2019-06-26 14:43:38.411394109 -0400
+--- fb.c	2019-07-06 14:35:56.627097812 -0700
++++ fb.new.c	2019-07-06 14:38:45.598426913 -0700
 @@ -10,6 +10,14 @@
  #include <sys/mman.h>
  #include <unistd.h>
@@ -55,47 +55,59 @@
      return ret;
  }
  
-@@ -136,3 +151,50 @@
+@@ -136,3 +151,62 @@
      for (i=0;i<SENSE_PIXELS;++i) buffer[i] = color;
      memcpy(bmp->bmp,buffer,SENSE_BUFFER_SIZE);
  }
 +
-+char* sense_fb_get_gamma(sense_bitmap_t fb) {
-+    if (!fb->isfb)
-+        return NULL;
-+        
-+    char* buf = malloc(32);
-+    if (!buf)
-+        return NULL;
++char sense_fb_get_gamma(sense_bitmap_t fb, char* gamma) {
++    if (!fb->isfb || !gamma)
++        return -1;
 +    
-+    ioctl(fb->fd, SENSE_FBIOGET_GAMMA, buf);
-+    return buf;
++    int ret = ioctl(fb->fd, SENSE_FBIOGET_GAMMA, gamma);
++    if (ret == -1)
++        return -1;
++    
++    return 0;
 +}
 +
-+void sense_fb_set_gamma(sense_bitmap_t fb, char* gamma) {
-+    if (!fb->isfb)
-+        return;
++char sense_fb_set_gamma(sense_bitmap_t fb, char* gamma) {
++    if (!fb->isfb || !gamma)
++        return -1;
 +        
-+    ioctl(fb->fd, SENSE_FBIOSET_GAMMA, gamma);
++    int ret = ioctl(fb->fd, SENSE_FBIOSET_GAMMA, gamma);
++    if (ret == -1)
++        return -1;
++    
++    return 0;
 +}
 +
-+void sense_fb_reset_gamma(sense_bitmap_t fb) {
++char sense_fb_reset_gamma(sense_bitmap_t fb) {
 +    if (!fb->isfb)
-+        return;
++        return -1;
 +        
-+    ioctl(fb->fd, SENSE_FBIORESET_GAMMA, SENSE_FB_GAMMA_DEFAULT);
++    int ret = ioctl(fb->fd, SENSE_FBIORESET_GAMMA, SENSE_FB_GAMMA_DEFAULT);
++    if (ret == -1)
++        return -1;
++        
++    return 0;
 +}
 +
-+void sense_fb_set_lowlight(sense_bitmap_t fb, char val) {
++char sense_fb_set_lowlight(sense_bitmap_t fb, char val) {
 +    if (!fb->isfb)
-+        return;
++        return -1;
 +
-+    ioctl(fb->fd, SENSE_FBIORESET_GAMMA, val ? SENSE_FB_GAMMA_LOW : SENSE_FB_GAMMA_DEFAULT);
++    int ret = ioctl(fb->fd, SENSE_FBIORESET_GAMMA, val ? SENSE_FB_GAMMA_LOW : SENSE_FB_GAMMA_DEFAULT);
++    if (ret == -1)
++        return -1;
++    
++    return 0;
 +}
 +
 +char sense_fb_get_lowlight(sense_bitmap_t fb) {
-+    char* gamma = sense_fb_get_gamma(fb);
-+    if (!gamma)
++    char gamma[32];
++    char ret = sense_fb_get_gamma(fb, gamma);
++    if (ret == -1)
 +        return -1;
 +    
 +    char i;
